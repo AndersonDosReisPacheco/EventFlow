@@ -1,9 +1,10 @@
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+// ✅ CORREÇÃO: Removi "/api" do final porque as rotas já incluem "/api"
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_URL, // ✅ AGORA sem "/api" no final
   headers: {
     "Content-Type": "application/json",
   },
@@ -24,6 +25,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
       window.location.href = "/login";
     }
     return Promise.reject(error);
@@ -34,7 +36,7 @@ export const eventsApi = {
   // 🔥 DADOS REAIS DO DASHBOARD
   async getStats() {
     try {
-      const response = await api.get("/events/stats");
+      const response = await api.get("/api/events/stats"); // ✅ CORRIGIDO: Adicionei "/api/"
       return response.data;
     } catch (error) {
       console.error("Erro ao buscar estatísticas:", error);
@@ -45,7 +47,7 @@ export const eventsApi = {
   // 🔥 GRÁFICOS COM DADOS REAIS
   async getChartData(days: number = 7) {
     try {
-      const response = await api.get(`/events/chart?days=${days}`);
+      const response = await api.get(`/api/events/chart?days=${days}`); // ✅ CORRIGIDO
       return response.data;
     } catch (error) {
       console.error("Erro ao buscar dados do gráfico:", error);
@@ -65,7 +67,7 @@ export const eventsApi = {
       if (filters.endDate) params.append("endDate", filters.endDate);
       if (filters.search) params.append("search", filters.search);
 
-      const response = await api.get(`/events?${params.toString()}`);
+      const response = await api.get(`/api/events?${params.toString()}`); // ✅ CORRIGIDO
       return response.data;
     } catch (error) {
       console.error("Erro ao buscar eventos:", error);
@@ -76,7 +78,7 @@ export const eventsApi = {
   // 🔥 TIPOS DE EVENTOS DISPONÍVEIS
   async getEventTypes() {
     try {
-      const response = await api.get("/events/types");
+      const response = await api.get("/api/events/types"); // ✅ CORRIGIDO
       return response.data;
     } catch (error) {
       console.error("Erro ao buscar tipos de eventos:", error);
@@ -87,7 +89,7 @@ export const eventsApi = {
   // 🔥 EVENTOS RECENTES
   async getRecentEvents(limit: number = 10) {
     try {
-      const response = await api.get(`/events/recent?limit=${limit}`);
+      const response = await api.get(`/api/events/recent?limit=${limit}`); // ✅ CORRIGIDO
       return response.data;
     } catch (error) {
       console.error("Erro ao buscar eventos recentes:", error);
@@ -98,7 +100,7 @@ export const eventsApi = {
   // 🔥 DETALHES DO EVENTO
   async getEventDetails(id: string) {
     try {
-      const response = await api.get(`/events/${id}`);
+      const response = await api.get(`/api/events/${id}`); // ✅ CORRIGIDO
       return response.data;
     } catch (error) {
       console.error("Erro ao buscar detalhes do evento:", error);
@@ -109,7 +111,7 @@ export const eventsApi = {
   // 🔥 LOG DE ACESSO AO DASHBOARD
   async logDashboardAccess() {
     try {
-      const response = await api.post("/events/dashboard-access");
+      const response = await api.post("/api/events/dashboard-access"); // ✅ CORRIGIDO
       return response.data;
     } catch (error) {
       console.error("Erro ao registrar acesso ao dashboard:", error);
@@ -129,7 +131,7 @@ export const notificationsApi = {
       if (filters.unreadOnly) params.append("unreadOnly", filters.unreadOnly);
       if (filters.type) params.append("type", filters.type);
 
-      const response = await api.get(`/notifications?${params.toString()}`);
+      const response = await api.get(`/api/notifications?${params.toString()}`); // ✅ CORRIGIDO
       return response.data;
     } catch (error) {
       console.error("Erro ao buscar notificações:", error);
@@ -140,7 +142,7 @@ export const notificationsApi = {
   // 🔥 ESTATÍSTICAS DE NOTIFICAÇÕES
   async getNotificationStats() {
     try {
-      const response = await api.get("/notifications/stats");
+      const response = await api.get("/api/notifications/stats"); // ✅ CORRIGIDO
       return response.data;
     } catch (error) {
       console.error("Erro ao buscar estatísticas de notificações:", error);
@@ -151,7 +153,7 @@ export const notificationsApi = {
   // 🔥 CONTADOR DE NÃO LIDAS
   async getUnreadCount() {
     try {
-      const response = await api.get("/notifications/unread-count");
+      const response = await api.get("/api/notifications/unread-count"); // ✅ CORRIGIDO
       return response.data;
     } catch (error) {
       console.error("Erro ao buscar contador de não lidas:", error);
@@ -162,7 +164,7 @@ export const notificationsApi = {
   // 🔥 MARCAR COMO LIDA
   async markAsRead(id: string) {
     try {
-      const response = await api.put(`/notifications/${id}`, { read: true });
+      const response = await api.put(`/api/notifications/${id}`, { read: true }); // ✅ CORRIGIDO
       return response.data;
     } catch (error) {
       console.error("Erro ao marcar como lida:", error);
@@ -173,7 +175,7 @@ export const notificationsApi = {
   // 🔥 MARCAR TODAS COMO LIDAS
   async markAllAsRead() {
     try {
-      const response = await api.put("/notifications/mark-all-read");
+      const response = await api.put("/api/notifications/mark-all-read"); // ✅ CORRIGIDO
       return response.data;
     } catch (error) {
       console.error("Erro ao marcar todas como lidas:", error);
@@ -186,7 +188,7 @@ export const profileApi = {
   // 🔥 DADOS REAIS DO PERFIL
   async getProfile() {
     try {
-      const response = await api.get("/profile");
+      const response = await api.get("/api/profile"); // ✅ CORRIGIDO
       return response.data;
     } catch (error) {
       console.error("Erro ao buscar perfil:", error);
@@ -197,7 +199,7 @@ export const profileApi = {
   // 🔥 ATUALIZAR PERFIL
   async updateProfile(data: any) {
     try {
-      const response = await api.put("/profile", data);
+      const response = await api.put("/api/profile", data); // ✅ CORRIGIDO
       return response.data;
     } catch (error) {
       console.error("Erro ao atualizar perfil:", error);
@@ -208,7 +210,7 @@ export const profileApi = {
   // 🔥 ALTERAR SENHA
   async updatePassword(data: any) {
     try {
-      const response = await api.put("/profile/password", data);
+      const response = await api.put("/api/profile/password", data); // ✅ CORRIGIDO
       return response.data;
     } catch (error) {
       console.error("Erro ao alterar senha:", error);

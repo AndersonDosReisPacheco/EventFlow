@@ -74,7 +74,7 @@ const Register: React.FC = () => {
   const password = watch('password')
 
   const getPasswordStrength = (password: string) => {
-    if (!password) return { score: 0, label: 'Vazia', color: 'gray', textColor: 'text-gray-500' }
+    if (!password) return { score: 0, label: 'Vazia', color: 'danger', textColor: 'text-danger-600 dark:text-danger-400' }
 
     let score = 0
     if (password.length >= 8) score++
@@ -99,37 +99,34 @@ const Register: React.FC = () => {
     setIsLoading(true)
 
     try {
-      // Usar a função register do AuthContext
+      // ✅ Usar a função register do AuthContext
       await registerUser(data.name, data.email, data.password, data.socialName || undefined)
       toast.success('Conta criada com sucesso!')
-
+      navigate('/dashboard')
     } catch (error: any) {
       console.error('Erro no registro:', error)
 
-      if (error.response?.status === 409 || error.response?.status === 400) {
-        if (error.response?.data?.error?.includes('email') || error.response?.data?.error?.includes('Email')) {
-          toast.error('Este email já está cadastrado')
-        } else if (error.response?.data?.error) {
-          // Corrigido: Tratar mensagem de erro interno do servidor
-          if (error.response.data.error.includes('Erro interno do servidor') ||
-              error.response.data.error.includes('Internal server error')) {
-            toast.error('Usuário, email ou credenciais já cadastradas')
-          } else {
-            toast.error(error.response.data.error)
-          }
+      // ✅ TRATAMENTO DE ERRO SIMPLIFICADO E CORRETO
+      if (error.response?.status === 400) {
+        const errorData = error.response.data
+        if (errorData.details?.field === 'email') {
+          toast.error(errorData.details?.message || 'Email inválido')
+        } else if (errorData.error?.includes('Email')) {
+          toast.error('Este email já está em uso')
         } else {
-          toast.error('Usuário, email ou credenciais já cadastradas')
+          toast.error(errorData.error || 'Dados inválidos')
         }
+      } else if (error.response?.status === 409) {
+        toast.error('Este email já está cadastrado')
+      } else if (error.response?.status === 500) {
+        toast.error('Erro interno do servidor. Tente novamente.')
+      } else if (error.code === 'ERR_NETWORK') {
+        toast.error('Erro de conexão. Verifique sua internet.')
       } else if (error.response?.data?.error) {
-        // Corrigido: Tratar mensagem de erro interno do servidor
-        if (error.response.data.error.includes('Erro interno do servidor') ||
-            error.response.data.error.includes('Internal server error')) {
-          toast.error('Usuário, email ou credenciais já cadastradas')
-        } else {
-          toast.error(error.response.data.error)
-        }
+        // ✅ Mostra a mensagem de erro do backend diretamente
+        toast.error(error.response.data.error)
       } else {
-        toast.error('Usuário, email ou credenciais já cadastradas')
+        toast.error('Erro ao criar conta. Tente novamente.')
       }
     } finally {
       setIsLoading(false)
@@ -139,7 +136,6 @@ const Register: React.FC = () => {
   const strength = getPasswordStrength(password || '')
 
   return (
-    // ADICIONADO: Container principal para centralizar
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-black p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -455,7 +451,6 @@ const Register: React.FC = () => {
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300 dark:border-gray-600" />
               </div>
-
             </div>
           </div>
 

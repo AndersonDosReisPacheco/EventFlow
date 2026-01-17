@@ -87,15 +87,7 @@ const Login: React.FC = () => {
       } else if (error.response?.status === 429) {
         toast.error('Muitas tentativas. Aguarde um momento.')
       } else if (error.response?.data?.error) {
-        // Corrigido: Tratar mensagem de erro interno do servidor
-        if (error.response.data.error.includes('Erro interno do servidor') ||
-            error.response.data.error.includes('Internal server error')) {
-          toast.error('Credenciais inválidas')
-        } else {
-          toast.error(error.response.data.error)
-        }
-      } else {
-        toast.error('Credenciais inválidas')
+        toast.error(error.response.data.error)
       }
     } finally {
       setIsLoading(false)
