@@ -1,32 +1,15 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import bcrypt from "bcrypt";
 import { prisma } from "../lib/prisma";
-import { z } from "zod";
 import { AuthRequest } from "../middlewares/auth.middleware";
-import { notificationController } from "./NotificationController";
-import { EventService } from "../services/EventService";
+import { z } from "zod";
+import { eventService } from "../services/EventService";
 
-const eventService = new EventService();
-
-//  Schemas de validação - BIO LIMITADA A 100 CARACTERES
+// Schemas de validação
 const updateProfileSchema = z.object({
-  name: z
-    .string()
-    .min(2, "Nome deve ter pelo menos 2 caracteres")
-    .max(100, "Nome muito longo")
-    .optional(),
-  email: z.string().email("Email inválido").optional(),
-  socialName: z
-    .string()
-    .max(100, "Nome social muito longo")
-    .optional()
-    .nullable(),
-  bio: z
-    .string()
-    .max(100, "Biografia deve ter no máximo 100 caracteres")
-    .optional()
-    .nullable(), //  ALTERADO: 100 caracteres
-  profilePicture: z.string().url("URL da foto inválida").optional().nullable(),
+  name: z.string().min(2).max(100).optional(),
+  socialName: z.string().max(100).optional().nullable(),
+  bio: z.string().max(500).optional().nullable(),
 });
 
 const updatePasswordSchema = z.object({
@@ -34,12 +17,12 @@ const updatePasswordSchema = z.object({
   newPassword: z.string().min(6, "Nova senha deve ter pelo menos 6 caracteres"),
 });
 
-const updateCredentialsSchema = z.object({
-  credentials: z.record(z.any()).optional(),
+const deleteAccountSchema = z.object({
+  password: z.string().min(1, "Senha é obrigatória para excluir a conta"),
 });
 
 export const profileController = {
-  //  Obter perfil do usuário atual - COM ISOLAMENTO
+  // ============ OBTER PERFIL ============
   async getProfile(req: AuthRequest, res: Response) {
     try {
       if (!req.userId) {
@@ -50,7 +33,7 @@ export const profileController = {
       }
 
       const user = await prisma.user.findUnique({
-        where: { id: req.userId }, //  ISOLAMENTO: Busca pelo ID do usuário autenticado
+        where: { id: req.userId },
         select: {
           id: true,
           email: true,
@@ -71,12 +54,12 @@ export const profileController = {
         });
       }
 
-      // Registrar evento de acesso ao perfil
+      // Log de acesso ao perfil
       await eventService.createEvent({
+        userId: req.userId,
         type: "PROFILE_ACCESS",
         message: "Usuário acessou página de perfil",
-        userId: req.userId,
-        ip: req.ip,
+        ip: req.ip || "unknown",
         userAgent: req.headers["user-agent"] as string,
       });
 
@@ -84,8 +67,8 @@ export const profileController = {
         success: true,
         user,
       });
-    } catch (error) {
-      console.error("Erro ao buscar perfil:", error);
+    } catch (error: any) {
+      console.error("Erro ao obter perfil:", error);
       return res.status(500).json({
         success: false,
         error: "Erro interno do servidor",
@@ -93,7 +76,7 @@ export const profileController = {
     }
   },
 
-  //  Atualizar perfil - COM ISOLAMENTO
+  // ============ ATUALIZAR PERFIL ============
   async updateProfile(req: AuthRequest, res: Response) {
     try {
       if (!req.userId) {
@@ -105,52 +88,9 @@ export const profileController = {
 
       const validatedData = updateProfileSchema.parse(req.body);
 
-      // Verificar se email já está em uso por outro usuário
-      if (validatedData.email) {
-        const existingUser = await prisma.user.findFirst({
-          where: {
-            email: validatedData.email,
-            id: { not: req.userId }, //  ISOLAMENTO: Exclui o próprio usuário
-          },
-        });
-
-        if (existingUser) {
-          return res.status(400).json({
-            success: false,
-            error: "Email já está em uso por outro usuário",
-          });
-        }
-      }
-
-      // Buscar dados antigos para log
-      const oldUser = await prisma.user.findUnique({
-        where: { id: req.userId },
-        select: {
-          name: true,
-          email: true,
-          socialName: true,
-          bio: true,
-          profilePicture: true,
-        },
-      });
-
-      // Preparar dados para atualização
-      const updateData: any = { ...validatedData };
-
-      // Adicionar updatedAt manualmente
-      updateData.updatedAt = new Date();
-
-      if (Object.keys(updateData).length === 0) {
-        return res.status(400).json({
-          success: false,
-          error: "Nenhum dado fornecido para atualização",
-        });
-      }
-
-      //  Atualizar usuário - COM ISOLAMENTO
       const user = await prisma.user.update({
-        where: { id: req.userId }, //  ISOLAMENTO: Atualiza apenas o usuário autenticado
-        data: updateData,
+        where: { id: req.userId },
+        data: validatedData,
         select: {
           id: true,
           email: true,
@@ -159,27 +99,20 @@ export const profileController = {
           profilePicture: true,
           bio: true,
           credentials: true,
+          createdAt: true,
           updatedAt: true,
         },
       });
 
-      // Registrar evento de atualização
-      const updatedFields = Object.keys(validatedData);
-      await eventService.logProfileUpdate(
-        req.userId,
-        updatedFields,
-        req.ip,
-        req.headers["user-agent"] as string
-      );
-
-      // Criar notificação
-      await notificationController.createNotification(req.userId, {
-        title: " Perfil atualizado",
-        message: `Seu perfil foi atualizado com sucesso. Campos modificados: ${updatedFields.join(", ")}`,
-        type: "SUCCESS",
+      // Log de atualização de perfil
+      await eventService.createEvent({
+        userId: req.userId,
+        type: "PROFILE_UPDATED",
+        message: "Perfil atualizado com sucesso",
+        ip: req.ip || "unknown",
+        userAgent: req.headers["user-agent"] as string,
         metadata: {
-          updatedFields,
-          timestamp: new Date().toISOString(),
+          updatedFields: Object.keys(validatedData),
         },
       });
 
@@ -188,7 +121,9 @@ export const profileController = {
         message: "Perfil atualizado com sucesso",
         user,
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Erro ao atualizar perfil:", error);
+
       if (error instanceof z.ZodError) {
         return res.status(400).json({
           success: false,
@@ -200,7 +135,6 @@ export const profileController = {
         });
       }
 
-      console.error("Erro ao atualizar perfil:", error);
       return res.status(500).json({
         success: false,
         error: "Erro interno do servidor",
@@ -208,7 +142,7 @@ export const profileController = {
     }
   },
 
-  //  Atualizar senha - COM ISOLAMENTO
+  // ============ ATUALIZAR SENHA ============
   async updatePassword(req: AuthRequest, res: Response) {
     try {
       if (!req.userId) {
@@ -222,7 +156,11 @@ export const profileController = {
 
       // Buscar usuário com senha
       const user = await prisma.user.findUnique({
-        where: { id: req.userId }, //  ISOLAMENTO
+        where: { id: req.userId },
+        select: {
+          id: true,
+          password: true,
+        },
       });
 
       if (!user) {
@@ -239,12 +177,12 @@ export const profileController = {
       );
 
       if (!isCurrentPasswordValid) {
-        // Registrar tentativa falha
+        // Log de tentativa falha
         await eventService.createEvent({
+          userId: req.userId,
           type: "PASSWORD_CHANGE_FAILED",
           message: "Tentativa de alteração de senha com senha atual incorreta",
-          userId: req.userId,
-          ip: req.ip,
+          ip: req.ip || "unknown",
           userAgent: req.headers["user-agent"] as string,
         });
 
@@ -255,41 +193,33 @@ export const profileController = {
       }
 
       // Hash da nova senha
-      const hashedPassword = await bcrypt.hash(validatedData.newPassword, 10);
-
-      //  Atualizar senha - COM ISOLAMENTO
-      await prisma.user.update({
-        where: { id: req.userId }, //  ISOLAMENTO
-        data: {
-          password: hashedPassword,
-          updatedAt: new Date(),
-        },
-      });
-
-      // Registrar alteração de senha
-      await eventService.logPasswordChange(
-        req.userId,
-        req.ip,
-        req.headers["user-agent"] as string
+      const hashedNewPassword = await bcrypt.hash(
+        validatedData.newPassword,
+        10
       );
 
-      // Criar notificação
-      await notificationController.createNotification(req.userId, {
-        title: " Senha alterada",
-        message:
-          "Sua senha foi alterada com sucesso. Se não foi você, entre em contato com o suporte.",
-        type: "WARNING",
-        metadata: {
-          timestamp: new Date().toISOString(),
-          ip: req.ip,
-        },
+      // Atualizar senha
+      await prisma.user.update({
+        where: { id: req.userId },
+        data: { password: hashedNewPassword },
+      });
+
+      // Log de alteração de senha bem-sucedida
+      await eventService.createEvent({
+        userId: req.userId,
+        type: "PASSWORD_CHANGED",
+        message: "Senha alterada com sucesso",
+        ip: req.ip || "unknown",
+        userAgent: req.headers["user-agent"] as string,
       });
 
       return res.json({
         success: true,
         message: "Senha alterada com sucesso",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Erro ao atualizar senha:", error);
+
       if (error instanceof z.ZodError) {
         return res.status(400).json({
           success: false,
@@ -301,7 +231,6 @@ export const profileController = {
         });
       }
 
-      console.error("Erro ao alterar senha:", error);
       return res.status(500).json({
         success: false,
         error: "Erro interno do servidor",
@@ -309,103 +238,7 @@ export const profileController = {
     }
   },
 
-  //  Atualizar credenciais - COM ISOLAMENTO
-  async updateCredentials(req: AuthRequest, res: Response) {
-    try {
-      if (!req.userId) {
-        return res.status(401).json({
-          success: false,
-          error: "Não autenticado",
-        });
-      }
-
-      const validatedData = updateCredentialsSchema.parse(req.body);
-
-      // Buscar credenciais atuais
-      const currentUser = await prisma.user.findUnique({
-        where: { id: req.userId }, //  ISOLAMENTO
-        select: { credentials: true },
-      });
-
-      // Preparar novas credenciais (mesclar com existentes)
-      const currentCredentialsObj = currentUser?.credentials;
-      const currentCredentials: Record<string, any> =
-        currentCredentialsObj &&
-        typeof currentCredentialsObj === "object" &&
-        !Array.isArray(currentCredentialsObj)
-          ? (currentCredentialsObj as Record<string, any>)
-          : {};
-      const newCredentials: Record<string, any> =
-        validatedData.credentials || {};
-
-      // Mesclar mantendo as existentes
-      const mergedCredentials = { ...currentCredentials, ...newCredentials };
-
-      //  Atualizar usuário - COM ISOLAMENTO
-      const user = await prisma.user.update({
-        where: { id: req.userId }, //  ISOLAMENTO
-        data: {
-          credentials: mergedCredentials,
-          updatedAt: new Date(),
-        },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          socialName: true,
-          profilePicture: true,
-          bio: true,
-          credentials: true,
-          updatedAt: true,
-        },
-      });
-
-      // Registrar atualização de credenciais
-      const updatedFields = Object.keys(newCredentials);
-      await eventService.logCredentialsUpdate(
-        req.userId,
-        updatedFields,
-        req.ip,
-        req.headers["user-agent"] as string
-      );
-
-      // Criar notificação
-      await notificationController.createNotification(req.userId, {
-        title: " Credenciais atualizadas",
-        message: `Suas credenciais foram atualizadas. ${updatedFields.length} campo(s) modificado(s).`,
-        type: "SUCCESS",
-        metadata: {
-          timestamp: new Date().toISOString(),
-          updatedFields,
-        },
-      });
-
-      return res.json({
-        success: true,
-        message: "Credenciais atualizadas com sucesso",
-        user,
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          success: false,
-          error: "Dados inválidos",
-          details: error.errors.map((err) => ({
-            field: err.path.join("."),
-            message: err.message,
-          })),
-        });
-      }
-
-      console.error("Erro ao atualizar credenciais:", error);
-      return res.status(500).json({
-        success: false,
-        error: "Erro interno do servidor",
-      });
-    }
-  },
-
-  //  Deletar conta - COM ISOLAMENTO
+  // ============ EXCLUIR CONTA ============
   async deleteAccount(req: AuthRequest, res: Response) {
     try {
       if (!req.userId) {
@@ -415,18 +248,17 @@ export const profileController = {
         });
       }
 
-      const { password } = req.body;
+      const validatedData = deleteAccountSchema.parse(req.body);
 
-      if (!password) {
-        return res.status(400).json({
-          success: false,
-          error: "Senha é obrigatória para deletar a conta",
-        });
-      }
-
-      // Buscar usuário
+      // Buscar usuário com senha
       const user = await prisma.user.findUnique({
-        where: { id: req.userId }, //  ISOLAMENTO
+        where: { id: req.userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          password: true,
+        },
       });
 
       if (!user) {
@@ -437,15 +269,18 @@ export const profileController = {
       }
 
       // Verificar senha
-      const isPasswordValid = await bcrypt.compare(password, user.password);
+      const isPasswordValid = await bcrypt.compare(
+        validatedData.password,
+        user.password
+      );
 
       if (!isPasswordValid) {
-        // Registrar tentativa falha
+        // Log de tentativa falha
         await eventService.createEvent({
+          userId: req.userId,
           type: "ACCOUNT_DELETE_FAILED",
           message: "Tentativa de exclusão de conta com senha incorreta",
-          userId: req.userId,
-          ip: req.ip,
+          ip: req.ip || "unknown",
           userAgent: req.headers["user-agent"] as string,
         });
 
@@ -455,30 +290,43 @@ export const profileController = {
         });
       }
 
-      // Registrar evento antes de deletar
+      // Log antes de excluir
       await eventService.createEvent({
+        userId: req.userId,
         type: "ACCOUNT_DELETED",
         message: "Conta deletada pelo usuário",
-        userId: req.userId,
-        ip: req.ip,
+        ip: req.ip || "unknown",
         userAgent: req.headers["user-agent"] as string,
         metadata: {
+          userId: req.userId,
           email: user.email,
           name: user.name,
         },
       });
 
-      //  Deletar usuário - COM ISOLAMENTO
+      // Excluir usuário (cascade excluirá eventos e notificações)
       await prisma.user.delete({
-        where: { id: req.userId }, //  ISOLAMENTO
+        where: { id: req.userId },
       });
 
       return res.json({
         success: true,
-        message: "Conta deletada com sucesso",
+        message: "Conta excluída com sucesso",
       });
-    } catch (error) {
-      console.error("Erro ao deletar conta:", error);
+    } catch (error: any) {
+      console.error("Erro ao excluir conta:", error);
+
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: "Dados inválidos",
+          details: error.errors.map((err) => ({
+            field: err.path.join("."),
+            message: err.message,
+          })),
+        });
+      }
+
       return res.status(500).json({
         success: false,
         error: "Erro interno do servidor",
@@ -486,7 +334,7 @@ export const profileController = {
     }
   },
 
-  //  Upload de foto de perfil - COM ISOLAMENTO
+  // ============ UPLOAD DE FOTO DE PERFIL ============
   async uploadProfilePicture(req: AuthRequest, res: Response) {
     try {
       if (!req.userId) {
@@ -496,20 +344,18 @@ export const profileController = {
         });
       }
 
-      // Em produção, usar multer/cloudinary
-      // Por enquanto, aceita URL
-      const { imageUrl } = req.body;
+      const { profilePicture } = req.body;
 
-      if (!imageUrl) {
+      if (!profilePicture) {
         return res.status(400).json({
           success: false,
-          error: "URL da imagem é obrigatória",
+          error: "URL da foto de perfil é obrigatória",
         });
       }
 
-      // Validar URL
+      // Validar URL (simples)
       try {
-        new URL(imageUrl);
+        new URL(profilePicture);
       } catch {
         return res.status(400).json({
           success: false,
@@ -517,40 +363,29 @@ export const profileController = {
         });
       }
 
-      //  Atualizar foto - COM ISOLAMENTO
       const user = await prisma.user.update({
-        where: { id: req.userId }, //  ISOLAMENTO
-        data: {
-          profilePicture: imageUrl,
-          updatedAt: new Date(),
-        },
+        where: { id: req.userId },
+        data: { profilePicture },
         select: {
           id: true,
           email: true,
           name: true,
           socialName: true,
           profilePicture: true,
+          bio: true,
+          credentials: true,
+          createdAt: true,
           updatedAt: true,
         },
       });
 
-      // Registrar evento
+      // Log de atualização de foto
       await eventService.createEvent({
+        userId: req.userId,
         type: "PROFILE_PICTURE_UPDATE",
         message: "Foto de perfil atualizada",
-        userId: req.userId,
-        ip: req.ip,
+        ip: req.ip || "unknown",
         userAgent: req.headers["user-agent"] as string,
-      });
-
-      // Criar notificação
-      await notificationController.createNotification(req.userId, {
-        title: " Foto atualizada",
-        message: "Sua foto de perfil foi atualizada com sucesso.",
-        type: "SUCCESS",
-        metadata: {
-          timestamp: new Date().toISOString(),
-        },
       });
 
       return res.json({
@@ -558,7 +393,7 @@ export const profileController = {
         message: "Foto de perfil atualizada com sucesso",
         user,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao atualizar foto de perfil:", error);
       return res.status(500).json({
         success: false,

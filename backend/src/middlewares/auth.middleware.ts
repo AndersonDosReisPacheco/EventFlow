@@ -1,9 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
-import { EventService } from "../services/EventService";
-
-const eventService = new EventService();
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -47,7 +44,7 @@ export const authenticateToken = async (
     req.user = decoded;
     req.userId = decoded.userId;
     next();
-  } catch (err) {
+  } catch (err: any) {
     console.error("Erro na autenticação:", err);
 
     if (err instanceof jwt.JsonWebTokenError) {

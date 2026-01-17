@@ -32,7 +32,7 @@ app.use(
 app.use(helmet());
 app.use(
   morgan("combined", {
-    stream: { write: (message) => Logger.http(message.trim()) },
+    stream: { write: (message: string) => Logger.http(message.trim()) },
   })
 );
 app.use(express.json({ limit: "10mb" }));
@@ -43,10 +43,12 @@ app.use(logAuthEvents);
 app.use(logEventsMiddleware);
 
 // Middleware para log de requisições
-app.use((req, res, next) => {
-  Logger.info(`${req.method} ${req.url}`);
-  next();
-});
+app.use(
+  (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    Logger.info(`${req.method} ${req.url}`);
+    next();
+  }
+);
 
 // Rotas
 app.use("/api/auth", authRoutes);
@@ -55,28 +57,31 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 // Health check
-app.get("/health", (req, res) =>
+app.get("/health", (req: express.Request, res: express.Response) =>
   res.json({ status: "OK", timestamp: new Date().toISOString() })
 );
 
 // Criar usuários demo na inicialização
-app.get("/api/init-demo", async (req, res) => {
-  try {
-    await authController.createDemoUsers();
-    await generateDemoEvents();
-    res.json({
-      success: true,
-      message: "Usuários demo e eventos criados/verificados",
-    });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, error: "Erro ao criar usuários demo" });
+app.get(
+  "/api/init-demo",
+  async (req: express.Request, res: express.Response) => {
+    try {
+      await authController.createDemoUsers();
+      await generateDemoEvents();
+      res.json({
+        success: true,
+        message: "Usuários demo e eventos criados/verificados",
+      });
+    } catch (error: any) {
+      res
+        .status(500)
+        .json({ success: false, error: "Erro ao criar usuários demo" });
+    }
   }
-});
+);
 
 // Rota de dashboard (mantida para compatibilidade)
-app.get("/api/dashboard", (req, res) => {
+app.get("/api/dashboard", (req: express.Request, res: express.Response) => {
   res.json({
     success: true,
     message: "Dashboard acessado",
@@ -84,29 +89,38 @@ app.get("/api/dashboard", (req, res) => {
   });
 });
 
-// Rota nÃ£o encontrada
-app.use("*", (req, res) =>
+// Rota não encontrada
+app.use("*", (req: express.Request, res: express.Response) =>
   res.status(404).json({ message: "Route not found" })
 );
 
 // Error handler
-app.use((err: any, req: any, res: any, next: any) => {
-  Logger.error(err.stack);
-  res.status(500).json({ message: "Something went wrong!" });
-});
+app.use(
+  (
+    err: any,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    Logger.error(err.stack);
+    res.status(500).json({ message: "Something went wrong!" });
+  }
+);
 
 // FUNÇÃO PARA GERAR EVENTOS DEMO
 const generateDemoEvents = async () => {
   try {
     console.log(" Gerando eventos demo automáticos...");
 
-    // Buscar usuário demo
+    // Buscar usuário demo (apenas ID)
     const demoUser = await prisma.user.findUnique({
       where: { email: "demo@eventflow.com" },
+      select: { id: true },
     });
 
     const adminUser = await prisma.user.findUnique({
       where: { email: "admin@eventflow.com" },
+      select: { id: true },
     });
 
     if (demoUser) {
@@ -311,7 +325,7 @@ const generateDemoEvents = async () => {
         console.log(` Notificações demo criadas para ${user.email}`);
       }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error(" Erro ao gerar eventos demo:", error);
   }
 };

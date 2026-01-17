@@ -1,5 +1,4 @@
-// D:\Meu_Projetos_Pessoais\EventFlow\backend\src\controllers\NotificationController.ts
-import { Request, Response } from "express";
+import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { AuthRequest } from "../middlewares/auth.middleware";
@@ -80,7 +79,7 @@ export const notificationController = {
       );
 
       return notification;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao criar notificação:", error);
       throw error;
     }
@@ -147,9 +146,10 @@ export const notificationController = {
         }),
       ]);
 
+      // CORREÇÃO: Usar tipo 'any' para evitar problemas com o Prisma 7
       const unreadIds = notifications
-        .filter((n) => !(n as any).read)
-        .map((n) => n.id);
+        .filter((n: any) => !n.read)
+        .map((n: any) => n.id);
 
       if (filters.unreadOnly !== "true" && unreadIds.length > 0) {
         await prisma.notification.updateMany({
@@ -160,8 +160,8 @@ export const notificationController = {
           data: { read: true },
         });
 
-        notifications.forEach((n) => {
-          if (!(n as any).read) (n as any).read = true;
+        notifications.forEach((n: any) => {
+          if (!n.read) n.read = true;
         });
       }
 
@@ -185,7 +185,7 @@ export const notificationController = {
         type: "NOTIFICATIONS_ACCESS",
         message: `Acessou notificações (filtros: ${JSON.stringify(filters)})`,
         userId: req.userId,
-        ip: req.ip,
+        ip: req.ip || "unknown",
         userAgent: req.headers["user-agent"] as string,
         metadata: {
           filters,
@@ -210,12 +210,12 @@ export const notificationController = {
           pages: Math.ceil(total / limitNum),
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({
           success: false,
           error: "Filtros inválidos",
-          details: error.errors.map((err) => ({
+          details: error.errors.map((err: any) => ({
             field: err.path.join("."),
             message: err.message,
           })),
@@ -284,7 +284,7 @@ export const notificationController = {
           },
         }),
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao buscar estatísticas:", error);
       return res.status(500).json({
         success: false,
@@ -333,7 +333,6 @@ export const notificationController = {
           type: true,
           read: true,
           createdAt: true,
-          // updatedAt não existe no seu model
         },
       });
 
@@ -341,7 +340,7 @@ export const notificationController = {
         type: "NOTIFICATION_UPDATED",
         message: `Notificação marcada como ${validatedData.read ? "lida" : "não lida"}`,
         userId: req.userId,
-        ip: req.ip,
+        ip: req.ip || "unknown",
         userAgent: req.headers["user-agent"] as string,
         metadata: {
           notificationId: notificationId,
@@ -354,12 +353,12 @@ export const notificationController = {
         message: "Notificação atualizada com sucesso",
         notification: updatedNotification,
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({
           success: false,
           error: "Dados inválidos",
-          details: error.errors.map((err) => ({
+          details: error.errors.map((err: any) => ({
             field: err.path.join("."),
             message: err.message,
           })),
@@ -386,7 +385,7 @@ export const notificationController = {
 
       const updatedCount = await prisma.notification.updateMany({
         where: {
-          userId: req.userId, //  ISOLAMENTO: Somente notificações do usuário
+          userId: req.userId,
           read: false,
         },
         data: { read: true },
@@ -397,7 +396,7 @@ export const notificationController = {
         type: "NOTIFICATIONS_MARK_ALL_READ",
         message: "Todas as notificações marcadas como lidas",
         userId: req.userId,
-        ip: req.ip,
+        ip: req.ip || "unknown",
         userAgent: req.headers["user-agent"] as string,
         metadata: {
           count: updatedCount.count,
@@ -409,7 +408,7 @@ export const notificationController = {
         message: "Todas as notificações marcadas como lidas",
         count: updatedCount.count,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao marcar notificações como lidas:", error);
       return res.status(500).json({
         success: false,
@@ -429,14 +428,13 @@ export const notificationController = {
       }
 
       const { id } = req.params;
-      // CORREÇÃO: Garantir que id seja string
       const notificationId = Array.isArray(id) ? id[0] : id;
 
-      //  VERIFICAÇÃO DE ISOLAMENTO: Garante que a notificação pertence ao usuário
+      // VERIFICAÇÃO DE ISOLAMENTO: Garante que a notificação pertence ao usuário
       const notification = await prisma.notification.findFirst({
         where: {
           id: notificationId,
-          userId: req.userId, //  ISOLAMENTO: Verifica se a notificação é do usuário
+          userId: req.userId,
         },
       });
 
@@ -457,7 +455,7 @@ export const notificationController = {
         type: "NOTIFICATION_DELETED",
         message: "Notificação excluída",
         userId: req.userId,
-        ip: req.ip,
+        ip: req.ip || "unknown",
         userAgent: req.headers["user-agent"] as string,
         metadata: {
           notificationId: notificationId,
@@ -469,7 +467,7 @@ export const notificationController = {
         success: true,
         message: "Notificação excluída com sucesso",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao excluir notificação:", error);
       return res.status(500).json({
         success: false,
@@ -497,7 +495,7 @@ export const notificationController = {
             : "false";
 
       const where: any = {
-        userId: req.userId, //  ISOLAMENTO: Somente notificações do usuário
+        userId: req.userId,
       };
 
       if (readOnlyValue === "true") {
@@ -513,7 +511,7 @@ export const notificationController = {
         type: "NOTIFICATIONS_DELETE_ALL",
         message: `Todas as notificações ${readOnlyValue === "true" ? "lidas" : ""} excluídas`,
         userId: req.userId,
-        ip: req.ip,
+        ip: req.ip || "unknown",
         userAgent: req.headers["user-agent"] as string,
         metadata: {
           count: deletedCount.count,
@@ -526,7 +524,7 @@ export const notificationController = {
         message: `Notificações ${readOnlyValue === "true" ? "lidas" : ""} excluídas com sucesso`,
         count: deletedCount.count,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao excluir notificações:", error);
       return res.status(500).json({
         success: false,
@@ -559,7 +557,7 @@ export const notificationController = {
         message: "Notificação criada com sucesso",
         notification,
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({
           success: false,
@@ -587,7 +585,7 @@ export const notificationController = {
 
       const count = await prisma.notification.count({
         where: {
-          userId: req.userId, //  ISOLAMENTO: Somente notificações do usuário
+          userId: req.userId,
           read: false,
         },
       });
@@ -596,7 +594,7 @@ export const notificationController = {
         success: true,
         count,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao contar notificações não lidas:", error);
       return res.status(500).json({
         success: false,

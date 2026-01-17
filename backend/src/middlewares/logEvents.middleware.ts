@@ -1,7 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { EventService } from "../services/EventService";
-
-const eventService = new EventService();
+import { eventService } from "../services/EventService";
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -20,7 +18,7 @@ export const logEventsMiddleware = async (
       if (req.path.includes("/api/events") && req.method === "GET") {
         await eventService.logDashboardAccess(
           req.userId,
-          req.ip,
+          req.ip || "unknown",
           req.headers["user-agent"] as string
         );
       }
@@ -28,10 +26,10 @@ export const logEventsMiddleware = async (
       // Registrar acesso ao perfil
       if (req.path.includes("/api/profile") && req.method === "GET") {
         await eventService.createEvent({
+          userId: req.userId,
           type: "PROFILE_ACCESS",
           message: "Usuário acessou perfil",
-          userId: req.userId,
-          ip: req.ip,
+          ip: req.ip || "unknown",
           userAgent: req.headers["user-agent"] as string,
         });
       }
@@ -39,10 +37,10 @@ export const logEventsMiddleware = async (
       // Registrar acesso a notificações
       if (req.path.includes("/api/notifications") && req.method === "GET") {
         await eventService.createEvent({
+          userId: req.userId,
           type: "NOTIFICATIONS_ACCESS",
           message: "Usuário acessou notificações",
-          userId: req.userId,
-          ip: req.ip,
+          ip: req.ip || "unknown",
           userAgent: req.headers["user-agent"] as string,
         });
       }
@@ -50,13 +48,13 @@ export const logEventsMiddleware = async (
 
     // Capturar respostas de erro
     const originalSend = res.send;
-    res.send = function (body) {
+    res.send = function (body: any) {
       try {
         // Verificar se é uma resposta de erro
         if (res.statusCode >= 400) {
           let parsedBody;
           try {
-            parsedBody = JSON.parse(body as string);
+            parsedBody = JSON.parse(body);
           } catch {
             parsedBody = body;
           }
@@ -64,11 +62,12 @@ export const logEventsMiddleware = async (
           if (req.userId) {
             eventService
               .logError(
+                req.userId,
+                `HTTP_${res.statusCode}`,
                 typeof parsedBody === "object"
                   ? parsedBody.error || "Erro não especificado"
                   : "Erro na requisição",
-                { statusCode: res.statusCode, path: req.path },
-                req.ip,
+                req.ip || "unknown",
                 req.headers["user-agent"] as string
               )
               .catch(console.error);
@@ -82,7 +81,7 @@ export const logEventsMiddleware = async (
     };
 
     next();
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro no middleware de eventos:", error);
     next();
   }
@@ -95,7 +94,7 @@ export const logAuthEvents = async (
   next: NextFunction
 ) => {
   const originalJson = res.json;
-  res.json = function (body) {
+  res.json = function (body: any) {
     try {
       // Registrar login bem-sucedido
       if (
@@ -107,7 +106,7 @@ export const logAuthEvents = async (
           eventService
             .logLoginSuccess(
               body.user.id,
-              req.ip,
+              req.ip || "unknown",
               req.headers["user-agent"] as string
             )
             .catch(console.error);
@@ -125,13 +124,13 @@ export const logAuthEvents = async (
             .logUserRegistration(
               body.user.id,
               body.user.email,
-              req.ip,
+              req.ip || "unknown",
               req.headers["user-agent"] as string
             )
             .catch(console.error);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao registrar evento de autenticação:", error);
     }
 

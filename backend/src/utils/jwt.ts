@@ -1,50 +1,37 @@
-import jwt, { JwtPayload, SignOptions } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 
-/**
- * Variáveis de ambiente obrigatórias
- */
-const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET as string;
-const REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_SECRET as string;
+// Garanta valores padrão seguros
+const ACCESS_TOKEN_SECRET =
+  process.env.JWT_SECRET ||
+  "eventflow_secret_key_development_2024_change_in_production";
+const REFRESH_TOKEN_SECRET =
+  process.env.JWT_REFRESH_SECRET ||
+  "eventflow_refresh_secret_key_development_2024_change_in_production";
 
-const ACCESS_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN as string;
-const REFRESH_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN as string;
-
-if (
-  !ACCESS_TOKEN_SECRET ||
-  !REFRESH_TOKEN_SECRET ||
-  !ACCESS_EXPIRES_IN ||
-  !REFRESH_EXPIRES_IN
-) {
-  throw new Error("JWT environment variables are not properly defined");
-}
-
-/**
- * Gera access + refresh token
- */
 export const generateTokens = (userId: string, email: string) => {
-  const payload = { sub: userId, email };
+  const accessToken = jwt.sign({ userId, email }, ACCESS_TOKEN_SECRET, {
+    expiresIn: "7d",
+  });
 
-  const accessToken = jwt.sign(payload, ACCESS_TOKEN_SECRET, {
-    expiresIn: ACCESS_EXPIRES_IN,
-  } as SignOptions);
-
-  const refreshToken = jwt.sign(payload, REFRESH_TOKEN_SECRET, {
-    expiresIn: REFRESH_EXPIRES_IN,
-  } as SignOptions);
+  const refreshToken = jwt.sign({ userId, email }, REFRESH_TOKEN_SECRET, {
+    expiresIn: "30d",
+  });
 
   return { accessToken, refreshToken };
 };
 
-/**
- * Valida access token
- */
-export const verifyAccessToken = (token: string): JwtPayload => {
-  return jwt.verify(token, ACCESS_TOKEN_SECRET) as JwtPayload;
+export const verifyAccessToken = (token: string) => {
+  try {
+    return jwt.verify(token, ACCESS_TOKEN_SECRET);
+  } catch (error) {
+    throw new Error("Token inválido ou expirado");
+  }
 };
 
-/**
- * Valida refresh token
- */
-export const verifyRefreshToken = (token: string): JwtPayload => {
-  return jwt.verify(token, REFRESH_TOKEN_SECRET) as JwtPayload;
+export const verifyRefreshToken = (token: string) => {
+  try {
+    return jwt.verify(token, REFRESH_TOKEN_SECRET);
+  } catch (error) {
+    throw new Error("Refresh token inválido ou expirado");
+  }
 };

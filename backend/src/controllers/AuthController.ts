@@ -4,9 +4,7 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { notificationController } from "./NotificationController";
-import { EventService } from "../services/EventService";
-
-const eventService = new EventService();
+import { eventService } from "../services/EventService";
 
 // Schemas de validação
 const registerSchema = z.object({
@@ -26,10 +24,6 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
   password: z.string().min(1, "Senha é obrigatória"),
-});
-
-const verifyTokenSchema = z.object({
-  authorization: z.string().optional(),
 });
 
 export const authController = {
@@ -87,17 +81,9 @@ export const authController = {
         process.env.JWT_SECRET ||
         "eventflow_secret_key_development_2024_changeme_for_production";
 
-      const token = jwt.sign(
-        {
-          userId: user.id,
-          email: user.email,
-          name: user.name,
-        },
-        secret,
-        {
-          expiresIn: "7d",
-        }
-      );
+      const token = jwt.sign({ userId: user.id }, secret, {
+        expiresIn: "7d",
+      });
 
       // Registrar evento de registro
       await eventService.logUserRegistration(
@@ -138,7 +124,7 @@ export const authController = {
         },
         token: token,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error(" [REGISTER] Erro:", error);
 
       if (error instanceof z.ZodError) {
@@ -180,8 +166,7 @@ export const authController = {
           "system",
           validatedData.email,
           req.ip || "unknown",
-          req.headers["user-agent"] as string,
-          "Usuário não encontrado"
+          req.headers["user-agent"] as string
         );
 
         return res.status(401).json({
@@ -202,8 +187,7 @@ export const authController = {
           user.id,
           validatedData.email,
           req.ip || "unknown",
-          req.headers["user-agent"] as string,
-          "Senha incorreta"
+          req.headers["user-agent"] as string
         );
 
         return res.status(401).json({
@@ -267,7 +251,7 @@ export const authController = {
         },
         token: token,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error(" [LOGIN] Erro:", error);
 
       if (error instanceof z.ZodError) {
@@ -318,7 +302,7 @@ export const authController = {
                 ip: req.ip || "unknown",
               },
             });
-          } catch (error) {
+          } catch (error: any) {
             // Token inválido ou expirado
             console.warn(" [LOGOUT] Token inválido ou expirado:", error);
           }
@@ -329,7 +313,7 @@ export const authController = {
         success: true,
         message: "Logout realizado com sucesso",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error(" [LOGOUT] Erro:", error);
       return res.status(500).json({
         success: false,
@@ -399,7 +383,7 @@ export const authController = {
         user: user,
         token: token,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error(" [VERIFY] Erro na verificação do token:", error);
 
       if (error instanceof jwt.JsonWebTokenError) {
@@ -479,9 +463,9 @@ export const authController = {
 
       // Log de acesso aos dados do perfil
       await eventService.createEvent({
+        userId: user.id,
         type: "PROFILE_ACCESS",
         message: "Usuário acessou dados do perfil",
-        userId: user.id,
         ip: req.ip || "unknown",
         userAgent: req.headers["user-agent"] as string,
         metadata: {
@@ -494,7 +478,7 @@ export const authController = {
         success: true,
         user: user,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error(" [ME] Erro:", error);
 
       if (
@@ -532,7 +516,7 @@ export const authController = {
         error: "Funcionalidade não implementada",
         message: "O refresh token ainda não está disponível",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error(" [REFRESH] Erro:", error);
       return res.status(500).json({
         success: false,
@@ -580,7 +564,7 @@ export const authController = {
           me: "GET /api/auth/me",
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error(" [AUTH HEALTH] Erro:", error);
       return res.status(503).json({
         success: false,
@@ -597,9 +581,10 @@ export const authController = {
     try {
       console.log(" [DEMO] Verificando usuários demo...");
 
-      // Verificar se usuário demo já existe
+      // Verificar se usuário demo já existe (apenas ID)
       const demoUser = await prisma.user.findUnique({
         where: { email: "demo@eventflow.com" },
+        select: { id: true },
       });
 
       if (!demoUser) {
@@ -623,9 +608,10 @@ export const authController = {
         console.log(" [DEMO] Usuário demo já existe");
       }
 
-      // Verificar se usuário admin já existe
+      // Verificar se usuário admin já existe (apenas ID)
       const adminUser = await prisma.user.findUnique({
         where: { email: "admin@eventflow.com" },
+        select: { id: true },
       });
 
       if (!adminUser) {
@@ -647,7 +633,7 @@ export const authController = {
       } else {
         console.log(" [DEMO] Usuário admin já existe");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(" [DEMO] Erro ao criar usuários demo:", error);
     }
   },

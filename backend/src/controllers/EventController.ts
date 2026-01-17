@@ -1,10 +1,8 @@
-// D:\Meu_Projetos_Pessoais\EventFlow\backend\src\controllers\EventController.ts
-import { Request, Response } from "express";
+import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import { z } from "zod";
 import { EventService } from "../services/EventService";
-import { Event } from "@prisma/client"; // Adicione esta importação
 
 const eventService = new EventService();
 
@@ -71,35 +69,35 @@ export const eventController = {
         dashboardEvents,
       ] = await Promise.all([
         prisma.event.count({
-          where: { userId: req.userId }, //  ISOLAMENTO
+          where: { userId: req.userId },
         }),
         prisma.event.count({
           where: {
-            userId: req.userId, //  ISOLAMENTO
+            userId: req.userId,
             createdAt: { gte: today },
           },
         }),
         prisma.event.count({
           where: {
-            userId: req.userId, //  ISOLAMENTO
+            userId: req.userId,
             createdAt: { gte: sevenDaysAgo },
           },
         }),
         prisma.event.count({
           where: {
-            userId: req.userId, //  ISOLAMENTO
+            userId: req.userId,
             createdAt: { gte: thirtyDaysAgo },
           },
         }),
         prisma.event.count({
           where: {
-            userId: req.userId, //  ISOLAMENTO
+            userId: req.userId,
             OR: [{ type: "LOGIN_SUCCESS" }, { type: "AUTH_LOGIN_SUCCESS" }],
           },
         }),
         prisma.event.count({
           where: {
-            userId: req.userId, //  ISOLAMENTO
+            userId: req.userId,
             OR: [{ type: "DASHBOARD_ACCESS" }, { type: "ACCESS_DASHBOARD" }],
           },
         }),
@@ -118,7 +116,7 @@ export const eventController = {
           last30DaysAvg: (last30DaysEvents / 30).toFixed(1),
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao buscar estatísticas:", error);
       return res.status(500).json({
         success: false,
@@ -148,7 +146,7 @@ export const eventController = {
       //  Buscar eventos APENAS do usuário autenticado
       const events = await prisma.event.findMany({
         where: {
-          userId: req.userId, //  ISOLAMENTO
+          userId: req.userId,
           createdAt: {
             gte: startDate,
             lte: endDate,
@@ -196,7 +194,7 @@ export const eventController = {
         success: true,
         chartData,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao buscar dados do gráfico:", error);
       return res.status(500).json({
         success: false,
@@ -218,11 +216,10 @@ export const eventController = {
       const filters = eventFiltersSchema.parse(req.query);
 
       const where: any = {
-        userId: req.userId, //  ISOLAMENTO: Filtro OBRIGATÓRIO
+        userId: req.userId,
       };
 
       if (filters.type) {
-        // CORREÇÃO: Garantir que seja string
         const typeValue =
           typeof filters.type === "string"
             ? filters.type
@@ -292,7 +289,7 @@ export const eventController = {
           pages: Math.ceil(total / filters.limit),
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({
           success: false,
@@ -329,8 +326,8 @@ export const eventController = {
       //  VERIFICAÇÃO CRÍTICA: Garante que o evento pertence ao usuário
       const event = await prisma.event.findFirst({
         where: {
-          id: id, // Agora id é garantidamente string
-          userId: req.userId, //  ISOLAMENTO: Filtro OBRIGATÓRIO
+          id: id,
+          userId: req.userId,
         },
         select: {
           id: true,
@@ -355,7 +352,7 @@ export const eventController = {
         success: true,
         event,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao buscar detalhes do evento:", error);
       return res.status(500).json({
         success: false,
@@ -378,7 +375,7 @@ export const eventController = {
         req.userId,
         "ACCESS_DASHBOARD",
         "Usuário acessou o dashboard",
-        req.ip,
+        req.ip || "unknown",
         req.headers["user-agent"] as string,
         {
           endpoint: req.url,
@@ -391,7 +388,7 @@ export const eventController = {
         success: true,
         message: "Acesso ao dashboard registrado",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao registrar acesso ao dashboard:", error);
       return res.status(500).json({
         success: false,
@@ -412,7 +409,7 @@ export const eventController = {
 
       const eventTypes = await prisma.event.groupBy({
         by: ["type"],
-        where: { userId: req.userId }, //  ISOLAMENTO
+        where: { userId: req.userId },
         _count: true,
         orderBy: {
           _count: {
@@ -428,7 +425,7 @@ export const eventController = {
           count: et._count,
         })),
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao buscar tipos de eventos:", error);
       return res.status(500).json({
         success: false,
@@ -451,7 +448,7 @@ export const eventController = {
       const limitNum = limit ? parseInt(limit) : 10;
 
       const events = await prisma.event.findMany({
-        where: { userId: req.userId }, //  ISOLAMENTO
+        where: { userId: req.userId },
         orderBy: { createdAt: "desc" },
         take: limitNum,
         select: {
@@ -467,7 +464,7 @@ export const eventController = {
         success: true,
         events,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao buscar eventos recentes:", error);
       return res.status(500).json({
         success: false,
