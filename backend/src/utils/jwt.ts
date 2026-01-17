@@ -1,24 +1,50 @@
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload, SignOptions } from "jsonwebtoken";
 
-const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET!;
-const REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_SECRET!;
-const ACCESS_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN!;
-const REFRESH_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN!;
+/**
+ * Variáveis de ambiente obrigatórias
+ */
+const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET as string;
+const REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_SECRET as string;
 
+const ACCESS_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN as string;
+const REFRESH_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN as string;
+
+if (
+  !ACCESS_TOKEN_SECRET ||
+  !REFRESH_TOKEN_SECRET ||
+  !ACCESS_EXPIRES_IN ||
+  !REFRESH_EXPIRES_IN
+) {
+  throw new Error("JWT environment variables are not properly defined");
+}
+
+/**
+ * Gera access + refresh token
+ */
 export const generateTokens = (userId: string, email: string) => {
-  const accessToken = jwt.sign({ userId, email }, ACCESS_TOKEN_SECRET, {
+  const payload = { sub: userId, email };
+
+  const accessToken = jwt.sign(payload, ACCESS_TOKEN_SECRET, {
     expiresIn: ACCESS_EXPIRES_IN,
-  });
-  const refreshToken = jwt.sign({ userId, email }, REFRESH_TOKEN_SECRET, {
+  } as SignOptions);
+
+  const refreshToken = jwt.sign(payload, REFRESH_TOKEN_SECRET, {
     expiresIn: REFRESH_EXPIRES_IN,
-  });
+  } as SignOptions);
+
   return { accessToken, refreshToken };
 };
 
-export const verifyAccessToken = (token: string) => {
-  return jwt.verify(token, ACCESS_TOKEN_SECRET);
+/**
+ * Valida access token
+ */
+export const verifyAccessToken = (token: string): JwtPayload => {
+  return jwt.verify(token, ACCESS_TOKEN_SECRET) as JwtPayload;
 };
 
-export const verifyRefreshToken = (token: string) => {
-  return jwt.verify(token, REFRESH_TOKEN_SECRET);
+/**
+ * Valida refresh token
+ */
+export const verifyRefreshToken = (token: string): JwtPayload => {
+  return jwt.verify(token, REFRESH_TOKEN_SECRET) as JwtPayload;
 };

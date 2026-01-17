@@ -4,6 +4,10 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { notificationController } from "./NotificationController";
+import { eventService } from "../services/EventService";
+import { generateTokens } from "../utils/jwt";
+
+const { accessToken, refreshToken } = generateTokens(user.id, user.email);
 
 // Schemas de validação
 const registerSchema = z.object({
@@ -83,11 +87,6 @@ export const authController = {
       if (!process.env.JWT_SECRET) {
         throw new Error("JWT_SECRET not defined");
       }
-
-      const secret = process.env.JWT_SECRET;
-      jwt.sign(payload, secret, {
-        expiresIn: "1d",
-      });
 
       // Registrar evento de registro
       await eventService.logUserRegistration(
