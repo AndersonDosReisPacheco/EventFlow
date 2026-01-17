@@ -1,50 +1,39 @@
-import winston from "winston";
+// Logger minimalista para evitar problemas de dependência
+type LogLevel = "error" | "warn" | "info" | "http" | "debug";
 
-const levels = {
-  error: 0,
-  warn: 1,
-  info: 2,
-  http: 3,
-  debug: 4,
-};
+class SimpleLogger {
+  private getTimestamp(): string {
+    return new Date().toISOString().replace("T", " ").substring(0, 23);
+  }
 
-const level = () => {
-  const env = process.env.NODE_ENV || "development";
-  return env === "development" ? "debug" : "info";
-};
+  private formatMessage(level: LogLevel, message: string): string {
+    const timestamp = this.getTimestamp();
+    const levelUpper = level.toUpperCase().padEnd(5);
+    return `${timestamp} ${levelUpper}: ${message}`;
+  }
 
-const colors = {
-  error: "red",
-  warn: "yellow",
-  info: "green",
-  http: "magenta",
-  debug: "white",
-};
+  error(message: string, ...meta: any[]): void {
+    console.error(this.formatMessage("error", message), ...meta);
+  }
 
-winston.addColors(colors);
+  warn(message: string, ...meta: any[]): void {
+    console.warn(this.formatMessage("warn", message), ...meta);
+  }
 
-const format = winston.format.combine(
-  winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss:ms" }),
-  winston.format.colorize({ all: true }),
-  winston.format.printf(
-    (info) => `${info.timestamp} ${info.level}: ${info.message}`
-  )
-);
+  info(message: string, ...meta: any[]): void {
+    console.info(this.formatMessage("info", message), ...meta);
+  }
 
-const transports = [
-  new winston.transports.Console(),
-  new winston.transports.File({
-    filename: "logs/error.log",
-    level: "error",
-  }),
-  new winston.transports.File({ filename: "logs/all.log" }),
-];
+  http(message: string, ...meta: any[]): void {
+    console.log(this.formatMessage("http", message), ...meta);
+  }
 
-const Logger = winston.createLogger({
-  level: level(),
-  levels,
-  format,
-  transports,
-});
+  debug(message: string, ...meta: any[]): void {
+    if (process.env.NODE_ENV === "development") {
+      console.debug(this.formatMessage("debug", message), ...meta);
+    }
+  }
+}
 
+const Logger = new SimpleLogger();
 export default Logger;
