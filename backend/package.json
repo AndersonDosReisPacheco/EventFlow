@@ -1,14 +1,26 @@
 {
   "name": "eventflow-backend",
   "version": "1.0.0",
-  "private": true,
+  "description": "Backend do EventFlow - Sistema de monitoramento de eventos em tempo real",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "start": "node dist/index.js",
-    "render-build": "npm install && npx prisma generate && npx prisma migrate deploy && npm run build"
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "postinstall": "prisma generate",
+    "test": "echo \"No tests specified\" && exit 0"
   },
+  "keywords": [
+    "eventflow",
+    "monitoring",
+    "real-time",
+    "dashboard"
+  ],
+  "author": "Anderson dos Reis Pacheco",
+  "license": "MIT",
   "dependencies": {
     "@prisma/client": "^6.19.2",
     "bcrypt": "^5.1.1",
@@ -26,13 +38,13 @@
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/morgan": "^1.9.9",
-    "@types/node": "^20.11.30",
+    "@types/node": "^20.19.30",
     "prisma": "^6.19.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.7.3"
   },
   "engines": {
-    "node": "18.x",
+    "node": ">=18.0.0",
     "npm": ">=8.0.0"
   }
 }
