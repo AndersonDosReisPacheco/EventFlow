@@ -1,7 +1,8 @@
+// src/contexts/AuthContext.tsx - CORREÇÃO COMPLETA
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface User {
   id: string;
@@ -18,23 +19,26 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  // ✅ ADICIONE ESTA PROPRIEDADE:
+  isAuthenticated: boolean; // Computado a partir de user !== null
+
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, socialName?: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   verifyToken: () => Promise<boolean>;
   updateUser: (userData: Partial<User>) => void;
 }
 
-// ✅ CORREÇÃO CRÍTICA: URL SEM "/api" no final
+// ✅ URL CORRETA: Sem "/api" no final
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-// ✅ Configuração do axios com baseURL correta
+// ✅ Configuração do axios
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 15000,
 });
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,74 +56,89 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(() => {
+    // ✅ Tenta carregar usuário do localStorage
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+  const [token, setToken] = useState<string | null>(() => {
+    return localStorage.getItem('token');
+  });
+
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // ✅ Interceptor para adicionar token automaticamente
-  api.interceptors.request.use(
-    (config) => {
-      const storedToken = localStorage.getItem('token');
-      if (storedToken && config.headers) {
-        config.headers.Authorization = `Bearer ${storedToken}`;
+  useEffect(() => {
+    const requestInterceptor = api.interceptors.request.use(
+      (config) => {
+        const storedToken = localStorage.getItem('token');
+        if (storedToken && config.headers) {
+          config.headers.Authorization = `Bearer ${storedToken}`;
+        }
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
       }
-      return config;
-    },
-    (error) => {
-      return Promise.reject(error);
-    }
-  );
+    );
 
-  // ✅ Interceptor para tratar erros de autenticação
-  api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      if (error.response?.status === 401) {
-        localStorage.removeItem('token');
-        setToken(null);
-        setUser(null);
-        if (!window.location.pathname.includes('/login')) {
-          navigate('/login');
+    const responseInterceptor = api.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        console.error('API Error:', error.response?.status, error.config?.url);
+
+        if (error.response?.status === 401) {
+          console.log('Token expirado ou inválido');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setToken(null);
+          setUser(null);
+
+          // ✅ Só redireciona se não estiver já na página de login
+          if (!location.pathname.includes('/login')) {
+            navigate('/login', { replace: true });
+          }
+        }
+
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      api.interceptors.request.eject(requestInterceptor);
+      api.interceptors.response.eject(responseInterceptor);
+    };
+  }, [navigate, location]);
+
+  // ✅ Verifica token ao carregar
+  useEffect(() => {
+    const verifyStoredToken = async () => {
+      const storedToken = localStorage.getItem('token');
+      if (storedToken) {
+        try {
+          const response = await api.get('/api/auth/verify');
+          if (response.data.valid && response.data.user) {
+            setUser(response.data.user);
+            setToken(storedToken);
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+          } else {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+          }
+        } catch (error) {
+          console.error('Token verification failed:', error);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
         }
       }
-      return Promise.reject(error);
-    }
-  );
-
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    if (storedToken) {
-      verifyTokenOnLoad(storedToken);
-    } else {
       setIsLoading(false);
-    }
+    };
+
+    verifyStoredToken();
   }, []);
-
-  const verifyTokenOnLoad = async (storedToken: string) => {
-    try {
-      const response = await api.get('/api/auth/verify', {
-        headers: { Authorization: `Bearer ${storedToken}` }
-      });
-
-      if (response.data.valid && response.data.user) {
-        setUser(response.data.user);
-        setToken(response.data.token || storedToken);
-        localStorage.setItem('token', response.data.token || storedToken);
-      } else {
-        localStorage.removeItem('token');
-        setToken(null);
-        setUser(null);
-      }
-    } catch (error) {
-      console.error('Token verification failed:', error);
-      localStorage.removeItem('token');
-      setToken(null);
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const verifyToken = async (): Promise<boolean> => {
     try {
@@ -136,37 +155,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<void> => {
     try {
       setIsLoading(true);
+      console.log('🔐 Tentando login...');
 
-      // ✅ CORREÇÃO: Usando "/api/auth/login" (com "/api/")
-      const response = await api.post('/api/auth/login', {
-        email,
-        password
-      });
-
-      console.log('Login response:', response.data); // Debug
+      const response = await api.post('/api/auth/login', { email, password });
+      console.log('✅ Login response:', response.data);
 
       if (response.data.success && response.data.token) {
         const { token, user } = response.data;
 
+        // ✅ SALVA TUDO NO localStorage
         localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+
+        // ✅ ATUALIZA ESTADO
         setToken(token);
         setUser(user);
 
         toast.success('Login realizado com sucesso!');
-        navigate('/dashboard'); // ✅ Redireciona para dashboard
+
+        // ✅ REDIRECIONA para dashboard ou página anterior
+        const from = location.state?.from?.pathname || '/dashboard';
+        console.log('🔄 Redirecionando para:', from);
+        navigate(from, { replace: true });
+
       } else {
         throw new Error(response.data.error || 'Login failed');
       }
     } catch (error: any) {
-      console.error('Login error details:', error.response?.data || error.message);
+      console.error('❌ Login error:', error.response?.data || error.message);
 
-      // ✅ Mensagens de erro mais específicas
       if (error.response?.status === 401) {
-        toast.error('Credenciais inválidas. Verifique email e senha.');
-      } else if (error.response?.status === 404) {
-        toast.error('Serviço de autenticação indisponível. Tente novamente.');
+        toast.error('Credenciais inválidas');
       } else if (error.code === 'ERR_NETWORK') {
-        toast.error('Erro de conexão. Verifique sua internet.');
+        toast.error('Erro de conexão');
       } else {
         toast.error(error.response?.data?.error || 'Erro ao fazer login');
       }
@@ -180,9 +201,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (name: string, email: string, password: string, socialName?: string): Promise<void> => {
     try {
       setIsLoading(true);
-
-      console.log('📤 Enviando registro para:', `${API_URL}/api/auth/register`);
-      console.log('📝 Dados:', { name, email, password: '***', socialName });
+      console.log('📝 Tentando registro...');
 
       const response = await api.post('/api/auth/register', {
         name,
@@ -191,37 +210,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         socialName
       });
 
-      console.log('✅ Resposta do registro:', response.data);
+      console.log('✅ Register response:', response.data);
 
       if (response.data.success && response.data.token) {
         const { token, user } = response.data;
 
+        // ✅ SALVA TUDO NO localStorage
         localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+
+        // ✅ ATUALIZA ESTADO
         setToken(token);
         setUser(user);
 
         toast.success('Conta criada com sucesso!');
-        navigate('/dashboard'); // ✅ Redireciona para dashboard
+
+        // ✅ REDIRECIONA para dashboard
+        console.log('🔄 Redirecionando para /dashboard');
+        navigate('/dashboard', { replace: true });
+
       } else {
         throw new Error(response.data.error || 'Registration failed');
       }
     } catch (error: any) {
-      console.error('Registration error details:', error.response?.data || error.message);
+      console.error('❌ Registration error:', error.response?.data || error.message);
 
-      // ✅ Mensagens de erro mais específicas
       if (error.response?.status === 400) {
-        const errorMsg = error.response.data.error || error.response.data.details?.message;
-        if (errorMsg?.includes('Email') || errorMsg?.includes('email')) {
-          toast.error('Este email já está cadastrado.');
-        } else if (errorMsg?.includes('Nome') || errorMsg?.includes('name')) {
-          toast.error('Nome inválido ou muito curto.');
-        } else {
-          toast.error(errorMsg || 'Dados inválidos. Verifique as informações.');
-        }
+        toast.error('Dados inválidos');
       } else if (error.response?.status === 409) {
-        toast.error('Este email já está em uso.');
-      } else if (error.code === 'ERR_NETWORK') {
-        toast.error('Erro de conexão. Verifique sua internet.');
+        toast.error('Email já cadastrado');
       } else {
         toast.error(error.response?.data?.error || 'Erro ao criar conta');
       }
@@ -238,11 +255,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      // ✅ LIMPA TUDO
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       setToken(null);
       setUser(null);
+
       toast.success('Logout realizado com sucesso');
-      navigate('/login');
+      navigate('/login', { replace: true });
     }
   };
 
@@ -250,6 +270,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (user) {
       const updatedUser = { ...user, ...userData };
       setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
     }
   };
 
@@ -257,6 +278,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     token,
     isLoading,
+    isAuthenticated: !!user, // ✅ Computado automaticamente
+
     login,
     register,
     logout,
