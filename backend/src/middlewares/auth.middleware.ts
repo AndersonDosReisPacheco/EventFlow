@@ -44,6 +44,7 @@ export const authenticateToken = async (
     req.user = decoded;
     req.userId = decoded.userId;
     next();
+    return; // Adicionado para garantir retorno
   } catch (err: any) {
     console.error("Erro na autenticação:", err);
 
