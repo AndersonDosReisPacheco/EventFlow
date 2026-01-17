@@ -3,7 +3,6 @@ import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { AuthRequest } from "../middlewares/auth.middleware";
-import { eventService } from "../services/EventService";
 
 // Schemas de validação
 const createNotificationSchema = z.object({

@@ -8,18 +8,20 @@ datasource db {
 }
 
 model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  name            String
-  socialName      String?
-  password        String
-  profilePicture  String?
-  bio             String?
-  credentials     Json?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  events          Event[]
-  notifications   Notification[]
+  id             String         @id @default(cuid())
+  email          String         @unique
+  name           String
+  socialName     String?
+  password       String
+  profilePicture String?
+  bio            String?
+  credentials    Json?
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  events         Event[]
+  notifications  Notification[]
 }
 
 model Event {
@@ -28,10 +30,13 @@ model Event {
   message   String
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   ip        String?
   userAgent String?
   metadata  Json?
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([type])
@@ -46,9 +51,12 @@ model Notification {
   type      String
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   read      Boolean  @default(false)
   metadata  Json?
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([read])

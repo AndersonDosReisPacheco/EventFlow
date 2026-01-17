@@ -5,7 +5,6 @@ import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import { notificationController } from "./NotificationController";
-import { eventService } from "../services/EventService";
 
 //  Schemas de validação - BIO LIMITADA A 100 CARACTERES
 const updateProfileSchema = z.object({
