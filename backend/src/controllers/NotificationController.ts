@@ -4,7 +4,6 @@ import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import { EventService } from "../services/EventService";
-import { Notification } from "@prisma/client"; // Adicione esta importação
 
 const eventService = new EventService();
 
@@ -104,7 +103,7 @@ export const notificationController = {
       const skip = (pageNum - 1) * limitNum;
 
       const where: any = {
-        userId: req.userId, //  ISOLAMENTO: Filtrando pelo usuário autenticado
+        userId: req.userId,
       };
 
       if (filters.unreadOnly === "true") {
@@ -112,7 +111,6 @@ export const notificationController = {
       }
 
       if (filters.type) {
-        // CORREÇÃO: Garantir que seja string
         const typeValue =
           typeof filters.type === "string"
             ? filters.type
@@ -143,34 +141,30 @@ export const notificationController = {
         prisma.notification.count({ where }),
         prisma.notification.count({
           where: {
-            userId: req.userId, //  ISOLAMENTO: Somente notificações do usuário
+            userId: req.userId,
             read: false,
           },
         }),
       ]);
 
-      // Marcar como lido ao visualizar (se não for apenas não lidas)
-      if (filters.unreadOnly !== "true" && notifications.length > 0) {
-        const unreadIds = notifications
-          .filter((n: Notification) => !n.read)
-          .map((n: Notification) => n.id);
-        if (unreadIds.length > 0) {
-          await prisma.notification.updateMany({
-            where: {
-              id: { in: unreadIds },
-              userId: req.userId, //  ISOLAMENTO: Somente notificações do usuário
-            },
-            data: { read: true },
-          });
+      const unreadIds = notifications
+        .filter((n) => !(n as any).read)
+        .map((n) => n.id);
 
-          // Atualizar status para lido no array de retorno
-          notifications.forEach((n: any) => {
-            if (!n.read) n.read = true;
-          });
-        }
+      if (filters.unreadOnly !== "true" && unreadIds.length > 0) {
+        await prisma.notification.updateMany({
+          where: {
+            id: { in: unreadIds },
+            userId: req.userId,
+          },
+          data: { read: true },
+        });
+
+        notifications.forEach((n) => {
+          if (!(n as any).read) (n as any).read = true;
+        });
       }
 
-      // Formatar notificações com data relativa
       const formattedNotifications = notifications.map((notification: any) => ({
         ...notification,
         createdAtFormatted: new Date(notification.createdAt).toLocaleString(
@@ -187,7 +181,6 @@ export const notificationController = {
         timeAgo: this.getTimeAgo(notification.createdAt),
       }));
 
-      // Registrar acesso às notificações
       await eventService.createEvent({
         type: "NOTIFICATIONS_ACCESS",
         message: `Acessou notificações (filtros: ${JSON.stringify(filters)})`,
@@ -249,29 +242,29 @@ export const notificationController = {
 
       const [total, unread, read, byType] = await Promise.all([
         prisma.notification.count({
-          where: { userId: req.userId }, //  ISOLAMENTO: Somente notificações do usuário
+          where: { userId: req.userId },
         }),
         prisma.notification.count({
           where: {
-            userId: req.userId, //  ISOLAMENTO: Somente notificações do usuário
+            userId: req.userId,
             read: false,
           },
         }),
         prisma.notification.count({
           where: {
-            userId: req.userId, //  ISOLAMENTO: Somente notificações do usuário
+            userId: req.userId,
             read: true,
           },
         }),
         prisma.notification.groupBy({
           by: ["type"],
-          where: { userId: req.userId }, //  ISOLAMENTO: Somente notificações do usuário
+          where: { userId: req.userId },
           _count: true,
         }),
       ]);
 
       const typeStats: Record<string, number> = {};
-      byType.forEach((item: { type: string; _count: number }) => {
+      byType.forEach((item: any) => {
         typeStats[item.type] = item._count;
       });
 
@@ -284,7 +277,7 @@ export const notificationController = {
         byType: typeStats,
         last24Hours: await prisma.notification.count({
           where: {
-            userId: req.userId, //  ISOLAMENTO: Somente notificações do usuário
+            userId: req.userId,
             createdAt: {
               gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
             },
@@ -311,16 +304,14 @@ export const notificationController = {
       }
 
       const { id } = req.params;
-      // CORREÇÃO: Garantir que id seja string
       const notificationId = Array.isArray(id) ? id[0] : id;
 
       const validatedData = updateNotificationSchema.parse(req.body);
 
-      //  VERIFICAÇÃO DE ISOLAMENTO: Garante que a notificação pertence ao usuário
       const notification = await prisma.notification.findFirst({
         where: {
           id: notificationId,
-          userId: req.userId, //  ISOLAMENTO: Verifica se a notificação é do usuário
+          userId: req.userId,
         },
       });
 
@@ -342,11 +333,10 @@ export const notificationController = {
           type: true,
           read: true,
           createdAt: true,
-          updatedAt: true,
+          // updatedAt não existe no seu model
         },
       });
 
-      // Registrar atualização
       await eventService.createEvent({
         type: "NOTIFICATION_UPDATED",
         message: `Notificação marcada como ${validatedData.read ? "lida" : "não lida"}`,
