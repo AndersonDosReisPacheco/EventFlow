@@ -1,8 +1,10 @@
-// D:\Meu_Projetos_Pessoais\EventFlow\backend\src\controllers\EventController.ts
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import { z } from "zod";
+import { EventService } from "../services/EventService";
+
+const eventService = new EventService();
 
 const eventFiltersSchema = z.object({
   type: z.string().optional(),
@@ -133,8 +135,8 @@ export const eventController = {
         });
       }
 
-      const { days = 7 } = req.query;
-      const daysCount = parseInt(days as string) || 7;
+      const days = req.query.days as string;
+      const daysCount = days ? parseInt(days) : 7;
 
       const endDate = new Date();
       const startDate = new Date();
@@ -427,8 +429,8 @@ export const eventController = {
         });
       }
 
-      const { limit = 10 } = req.query;
-      const limitNum = parseInt(limit as string) || 10;
+      const limit = req.query.limit as string;
+      const limitNum = limit ? parseInt(limit) : 10;
 
       const events = await prisma.event.findMany({
         where: { userId: req.userId }, //  ISOLAMENTO

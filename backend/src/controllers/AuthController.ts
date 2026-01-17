@@ -4,10 +4,9 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { notificationController } from "./NotificationController";
-import { eventService } from "../services/EventService";
-import { generateTokens } from "../utils/jwt";
+import { EventService } from "../services/EventService";
 
-const { accessToken, refreshToken } = generateTokens(user.id, user.email);
+const eventService = new EventService();
 
 // Schemas de validação
 const registerSchema = z.object({
@@ -84,9 +83,21 @@ export const authController = {
       });
 
       // Gerar token JWT
-      if (!process.env.JWT_SECRET) {
-        throw new Error("JWT_SECRET not defined");
-      }
+      const secret =
+        process.env.JWT_SECRET ||
+        "eventflow_secret_key_development_2024_changeme_for_production";
+
+      const token = jwt.sign(
+        {
+          userId: user.id,
+          email: user.email,
+          name: user.name,
+        },
+        secret,
+        {
+          expiresIn: "7d",
+        }
+      );
 
       // Registrar evento de registro
       await eventService.logUserRegistration(
@@ -169,7 +180,8 @@ export const authController = {
           "system",
           validatedData.email,
           req.ip || "unknown",
-          req.headers["user-agent"] as string
+          req.headers["user-agent"] as string,
+          "Usuário não encontrado"
         );
 
         return res.status(401).json({
@@ -190,7 +202,8 @@ export const authController = {
           user.id,
           validatedData.email,
           req.ip || "unknown",
-          req.headers["user-agent"] as string
+          req.headers["user-agent"] as string,
+          "Senha incorreta"
         );
 
         return res.status(401).json({
@@ -465,17 +478,17 @@ export const authController = {
       }
 
       // Log de acesso aos dados do perfil
-      await eventService.createEvent(
-        user.id,
-        "PROFILE_ACCESS",
-        "Usuário acessou dados do perfil",
-        req.ip || "unknown",
-        req.headers["user-agent"] as string,
-        {
+      await eventService.createEvent({
+        type: "PROFILE_ACCESS",
+        message: "Usuário acessou dados do perfil",
+        userId: user.id,
+        ip: req.ip || "unknown",
+        userAgent: req.headers["user-agent"] as string,
+        metadata: {
           endpoint: "/api/auth/me",
           timestamp: new Date().toISOString(),
-        }
-      );
+        },
+      });
 
       return res.json({
         success: true,

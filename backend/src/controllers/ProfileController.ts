@@ -1,11 +1,12 @@
-// D:\Meu_Projetos_Pessoais\EventFlow\backend\src\controllers\ProfileController.ts
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import { notificationController } from "./NotificationController";
-import { eventService } from '../services/EventService'
+import { EventService } from "../services/EventService";
+
+const eventService = new EventService();
 
 //  Schemas de validação - BIO LIMITADA A 100 CARACTERES
 const updateProfileSchema = z.object({
@@ -71,13 +72,13 @@ export const profileController = {
       }
 
       // Registrar evento de acesso ao perfil
-      await eventService.createEvent(
-        req.userId,
-        "PROFILE_ACCESS",
-        "Usuário acessou página de perfil",
-        req.ip,
-        req.headers["user-agent"] as string
-      );
+      await eventService.createEvent({
+        type: "PROFILE_ACCESS",
+        message: "Usuário acessou página de perfil",
+        userId: req.userId,
+        ip: req.ip,
+        userAgent: req.headers["user-agent"] as string,
+      });
 
       return res.json({
         success: true,
@@ -239,13 +240,13 @@ export const profileController = {
 
       if (!isCurrentPasswordValid) {
         // Registrar tentativa falha
-        await eventService.createEvent(
-          req.userId,
-          "PASSWORD_CHANGE_FAILED",
-          "Tentativa de alteração de senha com senha atual incorreta",
-          req.ip,
-          req.headers["user-agent"] as string
-        );
+        await eventService.createEvent({
+          type: "PASSWORD_CHANGE_FAILED",
+          message: "Tentativa de alteração de senha com senha atual incorreta",
+          userId: req.userId,
+          ip: req.ip,
+          userAgent: req.headers["user-agent"] as string,
+        });
 
         return res.status(400).json({
           success: false,
@@ -370,7 +371,7 @@ export const profileController = {
 
       // Criar notificação
       await notificationController.createNotification(req.userId, {
-        title: "📝 Credenciais atualizadas",
+        title: " Credenciais atualizadas",
         message: `Suas credenciais foram atualizadas. ${updatedFields.length} campo(s) modificado(s).`,
         type: "SUCCESS",
         metadata: {
@@ -440,13 +441,13 @@ export const profileController = {
 
       if (!isPasswordValid) {
         // Registrar tentativa falha
-        await eventService.createEvent(
-          req.userId,
-          "ACCOUNT_DELETE_FAILED",
-          "Tentativa de exclusão de conta com senha incorreta",
-          req.ip,
-          req.headers["user-agent"] as string
-        );
+        await eventService.createEvent({
+          type: "ACCOUNT_DELETE_FAILED",
+          message: "Tentativa de exclusão de conta com senha incorreta",
+          userId: req.userId,
+          ip: req.ip,
+          userAgent: req.headers["user-agent"] as string,
+        });
 
         return res.status(400).json({
           success: false,
@@ -455,17 +456,17 @@ export const profileController = {
       }
 
       // Registrar evento antes de deletar
-      await eventService.createEvent(
-        req.userId,
-        "ACCOUNT_DELETED",
-        "Conta deletada pelo usuário",
-        req.ip,
-        req.headers["user-agent"] as string,
-        {
+      await eventService.createEvent({
+        type: "ACCOUNT_DELETED",
+        message: "Conta deletada pelo usuário",
+        userId: req.userId,
+        ip: req.ip,
+        userAgent: req.headers["user-agent"] as string,
+        metadata: {
           email: user.email,
           name: user.name,
-        }
-      );
+        },
+      });
 
       //  Deletar usuário - COM ISOLAMENTO
       await prisma.user.delete({
@@ -534,13 +535,13 @@ export const profileController = {
       });
 
       // Registrar evento
-      await eventService.createEvent(
-        req.userId,
-        "PROFILE_PICTURE_UPDATE",
-        "Foto de perfil atualizada",
-        req.ip,
-        req.headers["user-agent"] as string
-      );
+      await eventService.createEvent({
+        type: "PROFILE_PICTURE_UPDATE",
+        message: "Foto de perfil atualizada",
+        userId: req.userId,
+        ip: req.ip,
+        userAgent: req.headers["user-agent"] as string,
+      });
 
       // Criar notificação
       await notificationController.createNotification(req.userId, {

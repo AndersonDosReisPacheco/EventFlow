@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
+import { EventService } from "../services/EventService";
+
+const eventService = new EventService();
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -19,11 +22,13 @@ export const authenticateToken = async (
     if (!token) {
       return res.status(401).json({
         success: false,
-        error: "Token de acesso não fornecido"
+        error: "Token de acesso não fornecido",
       });
     }
 
-    const secret = process.env.JWT_SECRET || "eventflow_secret_key_development_2024_changeme_for_production";
+    const secret =
+      process.env.JWT_SECRET ||
+      "eventflow_secret_key_development_2024_changeme_for_production";
 
     const decoded = jwt.verify(token, secret) as { userId: string };
 
@@ -35,7 +40,7 @@ export const authenticateToken = async (
     if (!user) {
       return res.status(401).json({
         success: false,
-        error: "Usuário não encontrado"
+        error: "Usuário não encontrado",
       });
     }
 
@@ -48,20 +53,20 @@ export const authenticateToken = async (
     if (err instanceof jwt.JsonWebTokenError) {
       return res.status(403).json({
         success: false,
-        error: "Token inválido ou malformado"
+        error: "Token inválido ou malformado",
       });
     }
 
     if (err instanceof jwt.TokenExpiredError) {
       return res.status(403).json({
         success: false,
-        error: "Token expirado"
+        error: "Token expirado",
       });
     }
 
     return res.status(403).json({
       success: false,
-      error: "Token inválido ou expirado"
+      error: "Token inválido ou expirado",
     });
   }
 };

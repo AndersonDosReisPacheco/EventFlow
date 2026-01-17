@@ -1,11 +1,12 @@
+// src/types/index.ts
 export interface User {
   id: string;
   email: string;
   name: string;
-  socialName?: string;
-  profilePicture?: string;
-  bio?: string;
-  credentials?: any;
+  socialName?: string | null;
+  profilePicture?: string | null;
+  bio?: string | null;
+  credentials?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,7 +18,7 @@ export interface Event {
   userId: string;
   ip?: string;
   userAgent?: string;
-  metadata?: any;
+  metadata?: Record<string, any>;
   createdAt: Date;
 }
 
@@ -28,25 +29,6 @@ export interface Notification {
   type: string;
   userId: string;
   read: boolean;
-  metadata?: any;
+  metadata?: Record<string, any>;
   createdAt: Date;
-}
-
-export interface AuthResponse {
-  success: boolean;
-  message?: string;
-  user?: User;
-  token?: string;
-  error?: string;
-}
-
-export interface PaginatedResponse<T> {
-  success: boolean;
-  data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
 }

@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
-import { eventService } from "../services/EventService";
+import { EventService } from "../services/EventService";
+
+const eventService = new EventService();
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -25,24 +27,24 @@ export const logEventsMiddleware = async (
 
       // Registrar acesso ao perfil
       if (req.path.includes("/api/profile") && req.method === "GET") {
-        await eventService.createEvent(
-          req.userId,
-          "PROFILE_ACCESS",
-          "Usuário acessou perfil",
-          req.ip,
-          req.headers["user-agent"] as string
-        );
+        await eventService.createEvent({
+          type: "PROFILE_ACCESS",
+          message: "Usuário acessou perfil",
+          userId: req.userId,
+          ip: req.ip,
+          userAgent: req.headers["user-agent"] as string,
+        });
       }
 
       // Registrar acesso a notificações
       if (req.path.includes("/api/notifications") && req.method === "GET") {
-        await eventService.createEvent(
-          req.userId,
-          "NOTIFICATIONS_ACCESS",
-          "Usuário acessou notificações",
-          req.ip,
-          req.headers["user-agent"] as string
-        );
+        await eventService.createEvent({
+          type: "NOTIFICATIONS_ACCESS",
+          message: "Usuário acessou notificações",
+          userId: req.userId,
+          ip: req.ip,
+          userAgent: req.headers["user-agent"] as string,
+        });
       }
     }
 
@@ -54,7 +56,7 @@ export const logEventsMiddleware = async (
         if (res.statusCode >= 400) {
           let parsedBody;
           try {
-            parsedBody = JSON.parse(body);
+            parsedBody = JSON.parse(body as string);
           } catch {
             parsedBody = body;
           }
@@ -62,11 +64,10 @@ export const logEventsMiddleware = async (
           if (req.userId) {
             eventService
               .logError(
-                req.userId,
-                `HTTP_${res.statusCode}`,
                 typeof parsedBody === "object"
                   ? parsedBody.error || "Erro não especificado"
                   : "Erro na requisição",
+                { statusCode: res.statusCode, path: req.path },
                 req.ip,
                 req.headers["user-agent"] as string
               )

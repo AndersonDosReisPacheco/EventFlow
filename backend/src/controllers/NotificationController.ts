@@ -1,9 +1,10 @@
-// D:\Meu_Projetos_Pessoais\EventFlow\backend\src\controllers\NotificationController.ts
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { AuthRequest } from "../middlewares/auth.middleware";
-import { eventService } from "../services/EventService";
+import { EventService } from "../services/EventService";
+
+const eventService = new EventService();
 
 // Schemas de validação
 const createNotificationSchema = z.object({
@@ -31,6 +32,24 @@ const notificationFiltersSchema = z.object({
 });
 
 export const notificationController = {
+  // Função auxiliar para calcular tempo relativo
+  getTimeAgo(date: Date): string {
+    const now = new Date();
+    const diffMs = now.getTime() - new Date(date).getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffDay > 30) {
+      return new Date(date).toLocaleDateString("pt-BR");
+    }
+    if (diffDay > 0) return `${diffDay} dia${diffDay > 1 ? "s" : ""} atrás`;
+    if (diffHour > 0) return `${diffHour} hora${diffHour > 1 ? "s" : ""} atrás`;
+    if (diffMin > 0) return `${diffMin} minuto${diffMin > 1 ? "s" : ""} atrás`;
+    return `${diffSec} segundo${diffSec > 1 ? "s" : ""} atrás`;
+  },
+
   // Criar notificação (função interna)
   async createNotification(
     userId: string,
@@ -156,19 +175,19 @@ export const notificationController = {
       }));
 
       // Registrar acesso às notificações
-      await eventService.createEvent(
-        req.userId,
-        "NOTIFICATIONS_ACCESS",
-        `Acessou notificações (filtros: ${JSON.stringify(filters)})`,
-        req.ip,
-        req.headers["user-agent"] as string,
-        {
+      await eventService.createEvent({
+        type: "NOTIFICATIONS_ACCESS",
+        message: `Acessou notificações (filtros: ${JSON.stringify(filters)})`,
+        userId: req.userId,
+        ip: req.ip,
+        userAgent: req.headers["user-agent"] as string,
+        metadata: {
           filters,
           results: notifications.length,
           total,
           unreadCount,
-        }
-      );
+        },
+      });
 
       return res.json({
         success: true,
@@ -312,17 +331,17 @@ export const notificationController = {
       });
 
       // Registrar atualização
-      await eventService.createEvent(
-        req.userId,
-        "NOTIFICATION_UPDATED",
-        `Notificação marcada como ${validatedData.read ? "lida" : "não lida"}`,
-        req.ip,
-        req.headers["user-agent"] as string,
-        {
+      await eventService.createEvent({
+        type: "NOTIFICATION_UPDATED",
+        message: `Notificação marcada como ${validatedData.read ? "lida" : "não lida"}`,
+        userId: req.userId,
+        ip: req.ip,
+        userAgent: req.headers["user-agent"] as string,
+        metadata: {
           notificationId: id,
           read: validatedData.read,
-        }
-      );
+        },
+      });
 
       return res.json({
         success: true,
@@ -368,16 +387,16 @@ export const notificationController = {
       });
 
       // Registrar marcação de todas como lidas
-      await eventService.createEvent(
-        req.userId,
-        "NOTIFICATIONS_MARK_ALL_READ",
-        "Todas as notificações marcadas como lidas",
-        req.ip,
-        req.headers["user-agent"] as string,
-        {
+      await eventService.createEvent({
+        type: "NOTIFICATIONS_MARK_ALL_READ",
+        message: "Todas as notificações marcadas como lidas",
+        userId: req.userId,
+        ip: req.ip,
+        userAgent: req.headers["user-agent"] as string,
+        metadata: {
           count: updatedCount.count,
-        }
-      );
+        },
+      });
 
       return res.json({
         success: true,
@@ -426,17 +445,17 @@ export const notificationController = {
       });
 
       // Registrar exclusão
-      await eventService.createEvent(
-        req.userId,
-        "NOTIFICATION_DELETED",
-        "Notificação excluída",
-        req.ip,
-        req.headers["user-agent"] as string,
-        {
+      await eventService.createEvent({
+        type: "NOTIFICATION_DELETED",
+        message: "Notificação excluída",
+        userId: req.userId,
+        ip: req.ip,
+        userAgent: req.headers["user-agent"] as string,
+        metadata: {
           notificationId: id,
           title: notification.title,
-        }
-      );
+        },
+      });
 
       return res.json({
         success: true,
@@ -461,7 +480,7 @@ export const notificationController = {
         });
       }
 
-      const { readOnly = "false" } = req.query;
+      const readOnly = (req.query.readOnly as string) || "false";
 
       const where: any = {
         userId: req.userId, //  ISOLAMENTO: Somente notificações do usuário
@@ -476,17 +495,17 @@ export const notificationController = {
       });
 
       // Registrar exclusão em massa
-      await eventService.createEvent(
-        req.userId,
-        "NOTIFICATIONS_DELETE_ALL",
-        `Todas as notificações ${readOnly === "true" ? "lidas" : ""} excluídas`,
-        req.ip,
-        req.headers["user-agent"] as string,
-        {
+      await eventService.createEvent({
+        type: "NOTIFICATIONS_DELETE_ALL",
+        message: `Todas as notificações ${readOnly === "true" ? "lidas" : ""} excluídas`,
+        userId: req.userId,
+        ip: req.ip,
+        userAgent: req.headers["user-agent"] as string,
+        metadata: {
           count: deletedCount.count,
           readOnly: readOnly === "true",
-        }
-      );
+        },
+      });
 
       return res.json({
         success: true,
@@ -570,23 +589,5 @@ export const notificationController = {
         error: "Erro interno do servidor",
       });
     }
-  },
-
-  //  Função auxiliar para calcular tempo relativo (COMPLETADA)
-  getTimeAgo(date: Date): string {
-    const now = new Date();
-    const diffMs = now.getTime() - new Date(date).getTime();
-    const diffSec = Math.floor(diffMs / 1000);
-    const diffMin = Math.floor(diffSec / 60);
-    const diffHour = Math.floor(diffMin / 60);
-    const diffDay = Math.floor(diffHour / 24);
-
-    if (diffDay > 30) {
-      return new Date(date).toLocaleDateString("pt-BR");
-    }
-    if (diffDay > 0) return `${diffDay} dia${diffDay > 1 ? "s" : ""} atrás`;
-    if (diffHour > 0) return `${diffHour} hora${diffHour > 1 ? "s" : ""} atrás`;
-    if (diffMin > 0) return `${diffMin} minuto${diffMin > 1 ? "s" : ""} atrás`;
-    return `${diffSec} segundo${diffSec > 1 ? "s" : ""} atrás`;
   },
 };
