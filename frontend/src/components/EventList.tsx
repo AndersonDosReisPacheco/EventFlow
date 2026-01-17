@@ -1,11 +1,19 @@
-==================================================
-ARQUIVO: D:\Meu_Projetos_Pessoais\EventFlow\frontend\src\components\EventList.tsx
-==================================================
 import React from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Eye, AlertCircle, CheckCircle, Shield, User, Settings, Lock } from 'lucide-react';
-import { Event } from '../types/event';
+
+// ADICIONE ESTA INTERFACE:
+interface Event {
+  id: string;
+  type: string;
+  message: string;
+  userId: string;
+  ip?: string;
+  userAgent?: string;
+  metadata?: any;
+  createdAt: string | Date;
+}
 
 interface EventListProps {
   events: Event[];

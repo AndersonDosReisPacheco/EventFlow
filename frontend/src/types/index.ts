@@ -10,6 +10,7 @@ export interface User {
   updatedAt: Date;
 }
 
+// Se você tem um arquivo de tipos, atualize a interface Event:
 export interface Event {
   id: string;
   type: string;
@@ -18,7 +19,7 @@ export interface Event {
   ip?: string;
   userAgent?: string;
   metadata?: any;
-  createdAt: Date;
+  createdAt: string | Date;
 }
 
 export interface Notification {

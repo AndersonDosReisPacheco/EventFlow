@@ -16,10 +16,10 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  isAuthenticated: boolean;
+  token: string | null;  // ADICIONE token
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, socialName?: string) => Promise<void>;
+  verifyToken: () => Promise<boolean>;  // ADICIONE verifyToken
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
 }
