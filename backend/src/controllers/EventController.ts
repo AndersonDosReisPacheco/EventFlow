@@ -1,8 +1,10 @@
+// D:\Meu_Projetos_Pessoais\EventFlow\backend\src\controllers\EventController.ts
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import { z } from "zod";
 import { EventService } from "../services/EventService";
+import { Event } from "@prisma/client"; // Adicione esta importação
 
 const eventService = new EventService();
 
@@ -169,15 +171,17 @@ export const eventController = {
         const dateStr = date.toISOString().split("T")[0];
 
         // Filtrar eventos deste dia
-        const dayEvents = events.filter((event) => {
-          const eventDate = new Date(event.createdAt);
-          eventDate.setHours(0, 0, 0, 0);
-          return eventDate.toISOString().split("T")[0] === dateStr;
-        });
+        const dayEvents = events.filter(
+          (event: { type: string; createdAt: Date }) => {
+            const eventDate = new Date(event.createdAt);
+            eventDate.setHours(0, 0, 0, 0);
+            return eventDate.toISOString().split("T")[0] === dateStr;
+          }
+        );
 
         // Agrupar por tipo
         const byType: Record<string, number> = {};
-        dayEvents.forEach((event) => {
+        dayEvents.forEach((event: { type: string; createdAt: Date }) => {
           byType[event.type] = (byType[event.type] || 0) + 1;
         });
 
@@ -218,7 +222,16 @@ export const eventController = {
       };
 
       if (filters.type) {
-        where.type = filters.type;
+        // CORREÇÃO: Garantir que seja string
+        const typeValue =
+          typeof filters.type === "string"
+            ? filters.type
+            : Array.isArray(filters.type)
+              ? filters.type[0]
+              : undefined;
+        if (typeValue) {
+          where.type = typeValue;
+        }
       }
 
       if (filters.startDate || filters.endDate) {
@@ -306,12 +319,17 @@ export const eventController = {
         });
       }
 
-      const { id } = req.params;
+      // CORREÇÃO: Garantir que id seja string
+      let { id } = req.params;
+      // Se id for array, pegar o primeiro elemento
+      if (Array.isArray(id)) {
+        id = id[0];
+      }
 
       //  VERIFICAÇÃO CRÍTICA: Garante que o evento pertence ao usuário
       const event = await prisma.event.findFirst({
         where: {
-          id,
+          id: id, // Agora id é garantidamente string
           userId: req.userId, //  ISOLAMENTO: Filtro OBRIGATÓRIO
         },
         select: {
@@ -405,7 +423,7 @@ export const eventController = {
 
       return res.json({
         success: true,
-        eventTypes: eventTypes.map((et) => ({
+        eventTypes: eventTypes.map((et: { type: string; _count: number }) => ({
           type: et.type,
           count: et._count,
         })),

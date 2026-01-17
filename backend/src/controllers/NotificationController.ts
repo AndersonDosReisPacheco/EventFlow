@@ -1,8 +1,10 @@
+// D:\Meu_Projetos_Pessoais\EventFlow\backend\src\controllers\NotificationController.ts
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import { EventService } from "../services/EventService";
+import { Notification } from "@prisma/client"; // Adicione esta importação
 
 const eventService = new EventService();
 
@@ -110,7 +112,16 @@ export const notificationController = {
       }
 
       if (filters.type) {
-        where.type = filters.type;
+        // CORREÇÃO: Garantir que seja string
+        const typeValue =
+          typeof filters.type === "string"
+            ? filters.type
+            : Array.isArray(filters.type)
+              ? filters.type[0]
+              : undefined;
+        if (typeValue) {
+          where.type = typeValue;
+        }
       }
 
       const [notifications, total, unreadCount] = await Promise.all([
@@ -140,7 +151,9 @@ export const notificationController = {
 
       // Marcar como lido ao visualizar (se não for apenas não lidas)
       if (filters.unreadOnly !== "true" && notifications.length > 0) {
-        const unreadIds = notifications.filter((n) => !n.read).map((n) => n.id);
+        const unreadIds = notifications
+          .filter((n: Notification) => !n.read)
+          .map((n: Notification) => n.id);
         if (unreadIds.length > 0) {
           await prisma.notification.updateMany({
             where: {
@@ -151,14 +164,14 @@ export const notificationController = {
           });
 
           // Atualizar status para lido no array de retorno
-          notifications.forEach((n) => {
+          notifications.forEach((n: any) => {
             if (!n.read) n.read = true;
           });
         }
       }
 
       // Formatar notificações com data relativa
-      const formattedNotifications = notifications.map((notification) => ({
+      const formattedNotifications = notifications.map((notification: any) => ({
         ...notification,
         createdAtFormatted: new Date(notification.createdAt).toLocaleString(
           "pt-BR",
@@ -258,7 +271,7 @@ export const notificationController = {
       ]);
 
       const typeStats: Record<string, number> = {};
-      byType.forEach((item) => {
+      byType.forEach((item: { type: string; _count: number }) => {
         typeStats[item.type] = item._count;
       });
 
@@ -298,12 +311,15 @@ export const notificationController = {
       }
 
       const { id } = req.params;
+      // CORREÇÃO: Garantir que id seja string
+      const notificationId = Array.isArray(id) ? id[0] : id;
+
       const validatedData = updateNotificationSchema.parse(req.body);
 
       //  VERIFICAÇÃO DE ISOLAMENTO: Garante que a notificação pertence ao usuário
       const notification = await prisma.notification.findFirst({
         where: {
-          id,
+          id: notificationId,
           userId: req.userId, //  ISOLAMENTO: Verifica se a notificação é do usuário
         },
       });
@@ -317,7 +333,7 @@ export const notificationController = {
       }
 
       const updatedNotification = await prisma.notification.update({
-        where: { id },
+        where: { id: notificationId },
         data: validatedData,
         select: {
           id: true,
@@ -338,7 +354,7 @@ export const notificationController = {
         ip: req.ip,
         userAgent: req.headers["user-agent"] as string,
         metadata: {
-          notificationId: id,
+          notificationId: notificationId,
           read: validatedData.read,
         },
       });
@@ -423,11 +439,13 @@ export const notificationController = {
       }
 
       const { id } = req.params;
+      // CORREÇÃO: Garantir que id seja string
+      const notificationId = Array.isArray(id) ? id[0] : id;
 
       //  VERIFICAÇÃO DE ISOLAMENTO: Garante que a notificação pertence ao usuário
       const notification = await prisma.notification.findFirst({
         where: {
-          id,
+          id: notificationId,
           userId: req.userId, //  ISOLAMENTO: Verifica se a notificação é do usuário
         },
       });
@@ -441,7 +459,7 @@ export const notificationController = {
       }
 
       await prisma.notification.delete({
-        where: { id },
+        where: { id: notificationId },
       });
 
       // Registrar exclusão
@@ -452,7 +470,7 @@ export const notificationController = {
         ip: req.ip,
         userAgent: req.headers["user-agent"] as string,
         metadata: {
-          notificationId: id,
+          notificationId: notificationId,
           title: notification.title,
         },
       });
@@ -480,13 +498,19 @@ export const notificationController = {
         });
       }
 
-      const readOnly = (req.query.readOnly as string) || "false";
+      const readOnly = req.query.readOnly;
+      const readOnlyValue =
+        typeof readOnly === "string"
+          ? readOnly
+          : Array.isArray(readOnly)
+            ? readOnly[0]
+            : "false";
 
       const where: any = {
         userId: req.userId, //  ISOLAMENTO: Somente notificações do usuário
       };
 
-      if (readOnly === "true") {
+      if (readOnlyValue === "true") {
         where.read = true;
       }
 
@@ -497,19 +521,19 @@ export const notificationController = {
       // Registrar exclusão em massa
       await eventService.createEvent({
         type: "NOTIFICATIONS_DELETE_ALL",
-        message: `Todas as notificações ${readOnly === "true" ? "lidas" : ""} excluídas`,
+        message: `Todas as notificações ${readOnlyValue === "true" ? "lidas" : ""} excluídas`,
         userId: req.userId,
         ip: req.ip,
         userAgent: req.headers["user-agent"] as string,
         metadata: {
           count: deletedCount.count,
-          readOnly: readOnly === "true",
+          readOnly: readOnlyValue === "true",
         },
       });
 
       return res.json({
         success: true,
-        message: `Notificações ${readOnly === "true" ? "lidas" : ""} excluídas com sucesso`,
+        message: `Notificações ${readOnlyValue === "true" ? "lidas" : ""} excluídas com sucesso`,
         count: deletedCount.count,
       });
     } catch (error) {
