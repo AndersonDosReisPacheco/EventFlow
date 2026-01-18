@@ -23,6 +23,8 @@ import {
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 interface DashboardStats {
   totalEvents: number;
   todayEvents: number;
@@ -62,12 +64,12 @@ const Dashboard: React.FC = () => {
       const token = localStorage.getItem('token');
 
       // Carregar estatísticas
-      const statsResponse = await axios.get('http://localhost:5000/api/events/stats', {
+      const statsResponse = await axios.get(`${API_URL}/api/events/stats`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       // Carregar eventos recentes
-      const eventsResponse = await axios.get('http://localhost:5000/api/events/recent?limit=5', {
+      const eventsResponse = await axios.get(`${API_URL}/api/events/recent?limit=5`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -80,7 +82,11 @@ const Dashboard: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Erro ao carregar dashboard:', error);
-      setError(error.response?.data?.error || 'Erro ao carregar dados');
+      if (error.code === 'ERR_NETWORK') {
+        setError('Não foi possível conectar ao servidor. Verifique sua conexão ou tente novamente mais tarde.');
+      } else {
+        setError(error.response?.data?.error || 'Erro ao carregar dados');
+      }
     } finally {
       setLoading(false);
     }

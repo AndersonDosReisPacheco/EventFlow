@@ -1,145 +1,99 @@
-import axios from 'axios';
+// ✅ IMPORTAR A INSTÂNCIA DO AuthContext EM VEZ DE CRIAR NOVA
+import { authApi } from '../contexts/AuthContext';
 
-// ✅ CORREÇÃO: URL sem "/api" no final (as rotas já incluem "/api")
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
-// ✅ CORREÇÃO: Criar instância ÚNICA do axios
-const api = axios.create({
-  baseURL: API_URL, // ✅ SEM "/api" no final
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 10000, // ✅ Adicionei timeout para evitar espera infinita
-});
-
-// Interceptor para adicionar token automaticamente
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Interceptor para tratar erros de autenticação
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error('Erro na requisição API:', error.response?.status, error.config?.url);
-
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      // ✅ Redireciona apenas se não estiver já na página de login
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
-    }
-
-    if (error.response?.status === 404) {
-      console.error(`Endpoint não encontrado: ${error.config?.url}`);
-      console.error('Verifique se a URL está correta e se o backend está rodando');
-    }
-
-    return Promise.reject(error);
-  }
-);
+// ✅ USAR A MESMA INSTÂNCIA
+const api = authApi;
 
 // ✅ FUNÇÕES DE AUTENTICAÇÃO (CRÍTICAS PARA LOGIN)
 export const auth = {
   login: (email: string, password: string) =>
-    api.post('/api/auth/login', { email, password }), // ✅ COM "/api/"
+    api.post('/api/auth/login', { email, password }),
 
   register: (data: any) =>
-    api.post('/api/auth/register', data), // ✅ COM "/api/"
+    api.post('/api/auth/register', data),
 
   logout: () =>
-    api.post('/api/auth/logout'), // ✅ COM "/api/"
+    api.post('/api/auth/logout'),
 
   me: () =>
-    api.get('/api/auth/me'), // ✅ COM "/api/"
+    api.get('/api/auth/me'),
 
   verifyToken: (token: string) =>
     api.get('/api/auth/verify', {
       headers: { Authorization: `Bearer ${token}` },
-    }), // ✅ COM "/api/"
+    }),
 
   healthCheck: () =>
-    api.get('/api/auth/health'), // ✅ COM "/api/"
+    api.get('/api/auth/health'),
 };
 
 // ✅ FUNÇÕES DE EVENTOS
 export const events = {
   getEvents: (params?: any) =>
-    api.get('/api/events', { params }), // ✅ COM "/api/"
+    api.get('/api/events', { params }),
 
   getEventStats: () =>
-    api.get('/api/events/stats'), // ✅ COM "/api/"
+    api.get('/api/events/stats'),
 
   getEventsChartData: (days: number = 7) =>
-    api.get('/api/events/chart', { params: { days } }), // ✅ COM "/api/"
+    api.get('/api/events/chart', { params: { days } }),
 
   getEventTypes: () =>
-    api.get('/api/events/types'), // ✅ COM "/api/"
+    api.get('/api/events/types'),
 
   getRecentEvents: (limit: number = 10) =>
-    api.get('/api/events/recent', { params: { limit } }), // ✅ COM "/api/"
+    api.get('/api/events/recent', { params: { limit } }),
 
   getEventDetails: (id: string) =>
-    api.get(`/api/events/${id}`), // ✅ COM "/api/"
+    api.get(`/api/events/${id}`),
 
   logDashboardAccess: () =>
-    api.post('/api/events/dashboard-access'), // ✅ COM "/api/"
+    api.post('/api/events/dashboard-access'),
 };
 
 // ✅ FUNÇÕES DE NOTIFICAÇÕES
 export const notifications = {
   getNotifications: (params?: any) =>
-    api.get('/api/notifications', { params }), // ✅ COM "/api/"
+    api.get('/api/notifications', { params }),
 
   getNotificationStats: () =>
-    api.get('/api/notifications/stats'), // ✅ COM "/api/"
+    api.get('/api/notifications/stats'),
 
   getUnreadCount: () =>
-    api.get('/api/notifications/unread-count'), // ✅ COM "/api/"
+    api.get('/api/notifications/unread-count'),
 
   createNotification: (data: any) =>
-    api.post('/api/notifications', data), // ✅ COM "/api/"
+    api.post('/api/notifications', data),
 
   updateNotification: (id: string, data: any) =>
-    api.put(`/api/notifications/${id}`, data), // ✅ COM "/api/"
+    api.put(`/api/notifications/${id}`, data),
 
   markAllAsRead: () =>
-    api.put('/api/notifications/mark-all-read'), // ✅ COM "/api/"
+    api.put('/api/notifications/mark-all-read'),
 
   deleteNotification: (id: string) =>
-    api.delete(`/api/notifications/${id}`), // ✅ COM "/api/"
+    api.delete(`/api/notifications/${id}`),
 
   deleteAllNotifications: (readOnly: boolean = false) =>
-    api.delete('/api/notifications', { params: { readOnly } }), // ✅ COM "/api/"
+    api.delete('/api/notifications', { params: { readOnly } }),
 };
 
 // ✅ FUNÇÕES DE PERFIL
 export const profile = {
   getProfile: () =>
-    api.get('/api/profile'), // ✅ COM "/api/"
+    api.get('/api/profile'),
 
   updateProfile: (data: any) =>
-    api.put('/api/profile', data), // ✅ COM "/api/"
+    api.put('/api/profile', data),
 
   updatePassword: (currentPassword: string, newPassword: string) =>
-    api.put('/api/profile/password', { currentPassword, newPassword }), // ✅ COM "/api/"
+    api.put('/api/profile/password', { currentPassword, newPassword }),
 
   uploadProfilePicture: (imageUrl: string) =>
-    api.post('/api/profile/upload-picture', { profilePicture: imageUrl }), // ✅ CORRIGIDO: POST em vez de PUT
+    api.post('/api/profile/upload-picture', { profilePicture: imageUrl }),
 
   deleteAccount: (password: string) =>
-    api.delete('/api/profile', { data: { password } }), // ✅ COM "/api/"
+    api.delete('/api/profile', { data: { password } }),
 };
 
 // ✅ EXPORTAÇÃO PADRÃO PARA COMPATIBILIDADE

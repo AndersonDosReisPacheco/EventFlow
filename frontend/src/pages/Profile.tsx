@@ -8,11 +8,11 @@ import {
   Eye, EyeOff, Bell, Globe, Settings, Upload, X, Download,
   Lock, Smartphone, Monitor, ExternalLink, CreditCard,
   HardDrive, Database, Zap, Moon, Sun, Languages,
-  RefreshCw // ADICIONE ESTA IMPORT AQUI
+  RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 interface ProfileData {
   name: string;
@@ -276,7 +276,7 @@ const Profile: React.FC = () => {
         profilePicture: profileData.profilePicture || null
       };
 
-      const response = await axios.put(`${API_URL}/profile`, payload, {
+      const response = await axios.put(`${API_URL}/api/users/profile`, payload, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -295,6 +295,8 @@ const Profile: React.FC = () => {
 
       if (error.response?.status === 413) {
         toast.error('Imagem muito grande. Use uma imagem menor (max 5MB)');
+      } else if (error.code === 'ERR_NETWORK') {
+        toast.error('Erro de conexão com o servidor');
       } else {
         toast.error(error.response?.data?.error || 'Erro ao atualizar perfil');
       }
@@ -330,7 +332,7 @@ const Profile: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await axios.put(`${API_URL}/profile/password`, {
+      const response = await axios.put(`${API_URL}/api/users/change-password`, {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword,
       }, {
@@ -352,7 +354,11 @@ const Profile: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Erro ao alterar senha:', error);
-      toast.error(error.response?.data?.error || 'Erro ao alterar senha');
+      if (error.code === 'ERR_NETWORK') {
+        toast.error('Erro de conexão com o servidor');
+      } else {
+        toast.error(error.response?.data?.error || 'Erro ao alterar senha');
+      }
     } finally {
       setLoading(false);
     }
@@ -362,11 +368,27 @@ const Profile: React.FC = () => {
   const handleAccountSettingsUpdate = async () => {
     setLoading(true);
     try {
-      // Em produção, enviar para API
-      toast.success('Configurações da conta atualizadas com sucesso!');
-    } catch (error) {
+      // Usar a rota correta para atualizar configurações
+      const response = await axios.put(`${API_URL}/api/users/settings`, accountSettings, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.data.success) {
+        updateUser(response.data.user);
+        toast.success('Configurações da conta atualizadas com sucesso!');
+      } else {
+        toast.error(response.data.error || 'Erro ao atualizar configurações');
+      }
+    } catch (error: any) {
       console.error('Erro ao atualizar configurações:', error);
-      toast.error('Erro ao atualizar configurações');
+      if (error.code === 'ERR_NETWORK') {
+        toast.error('Erro de conexão com o servidor');
+      } else {
+        toast.error('Erro ao atualizar configurações');
+      }
     } finally {
       setLoading(false);
     }
@@ -399,7 +421,8 @@ const Profile: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await axios.put(`${API_URL}/profile/credentials`, {
+      // Usar a rota correta para salvar credenciais
+      const response = await axios.put(`${API_URL}/api/users/credentials`, {
         credentials,
       }, {
         headers: {
@@ -416,7 +439,11 @@ const Profile: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Erro ao salvar credenciais:', error);
-      toast.error(error.response?.data?.error || 'Erro ao salvar credenciais');
+      if (error.code === 'ERR_NETWORK') {
+        toast.error('Erro de conexão com o servidor');
+      } else {
+        toast.error(error.response?.data?.error || 'Erro ao salvar credenciais');
+      }
     } finally {
       setLoading(false);
     }
@@ -437,7 +464,7 @@ const Profile: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await axios.delete(`${API_URL}/profile`, {
+      const response = await axios.delete(`${API_URL}/api/users/account`, {
         data: { password: deleteData.password },
         headers: {
           'Content-Type': 'application/json',
@@ -454,7 +481,11 @@ const Profile: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Erro ao excluir conta:', error);
-      toast.error(error.response?.data?.error || 'Erro ao excluir conta');
+      if (error.code === 'ERR_NETWORK') {
+        toast.error('Erro de conexão com o servidor');
+      } else {
+        toast.error(error.response?.data?.error || 'Erro ao excluir conta');
+      }
     } finally {
       setLoading(false);
     }
@@ -495,8 +526,13 @@ const Profile: React.FC = () => {
 
       switch (type) {
         case 'events':
-          // Em produção, buscar eventos da API
-          data = { events: [] };
+          // Buscar eventos da API
+          const eventsResponse = await axios.get(`${API_URL}/api/events`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          data = eventsResponse.data;
           filename = `eventflow-events-${new Date().toISOString().split('T')[0]}.json`;
           break;
         case 'profile':
@@ -504,7 +540,7 @@ const Profile: React.FC = () => {
           filename = `eventflow-profile-${new Date().toISOString().split('T')[0]}.json`;
           break;
         case 'all':
-          data = {
+          const allData = {
             profile: user,
             credentials: credentials,
             settings: {
@@ -512,6 +548,7 @@ const Profile: React.FC = () => {
               account: accountSettings
             }
           };
+          data = allData;
           filename = `eventflow-backup-${new Date().toISOString().split('T')[0]}.json`;
           break;
       }

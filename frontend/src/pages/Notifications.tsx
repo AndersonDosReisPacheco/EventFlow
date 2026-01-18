@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
+// ✅ ADICIONAR URL BASE
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 interface Notification {
   id: string;
   title: string;
@@ -22,7 +25,8 @@ const Notifications: React.FC = () => {
 
   const fetchNotifications = async (): Promise<void> => {
     try {
-      const response = await fetch('http://localhost:5000/api/notifications', {
+      // ✅ CORREÇÃO: Usar API_URL + rota
+      const response = await fetch(`${API_URL}/api/notifications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await response.json();
@@ -38,7 +42,8 @@ const Notifications: React.FC = () => {
 
   const markAsRead = async (id: string): Promise<void> => {
     try {
-      await fetch(`http://localhost:5000/api/notifications/${id}`, {
+      // ✅ CORREÇÃO: Usar API_URL + rota
+      await fetch(`${API_URL}/api/notifications/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -54,7 +59,8 @@ const Notifications: React.FC = () => {
 
   const markAllAsRead = async (): Promise<void> => {
     try {
-      await fetch('http://localhost:5000/api/notifications/mark-all-read', {
+      // ✅ CORREÇÃO: Usar API_URL + rota
+      await fetch(`${API_URL}/api/notifications/mark-all-read`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` }
       });

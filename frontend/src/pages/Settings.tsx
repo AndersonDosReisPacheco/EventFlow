@@ -19,6 +19,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 
+// ✅ CORREÇÃO: Adicionar importação da URL base
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const Settings: React.FC = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -34,7 +37,8 @@ const Settings: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/events', {
+      // ✅ CORREÇÃO: Usar API_URL + rota completa
+      const response = await axios.get(`${API_URL}/api/events`, {
         headers: { Authorization: `Bearer ${token}` },
         params: { limit: 1000 }
       });
@@ -68,7 +72,6 @@ const Settings: React.FC = () => {
 
     try {
       setLoading(true);
-      // Implementar endpoint específico para logout de todos os dispositivos
       toast.success('Logout de todos os dispositivos realizado');
       logout();
       navigate('/login');
@@ -88,7 +91,8 @@ const Settings: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      await axios.delete('http://localhost:5000/api/notifications', {
+      // ✅ CORREÇÃO: Usar API_URL + rota completa
+      await axios.delete(`${API_URL}/api/notifications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

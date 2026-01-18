@@ -1,4 +1,4 @@
-// src/contexts/AuthContext.tsx - CORREÇÃO COMPLETA
+// src/contexts/AuthContext.tsx - VERSÃO SIMPLIFICADA E CORRETA
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -19,9 +19,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  // ✅ ADICIONE ESTA PROPRIEDADE:
-  isAuthenticated: boolean; // Computado a partir de user !== null
-
+  isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, socialName?: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -29,12 +27,12 @@ interface AuthContextType {
   updateUser: (userData: Partial<User>) => void;
 }
 
-// ✅ URL CORRETA: Sem "/api" no final
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// ✅ URL SEM "/api" NO FINAL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-// ✅ Configuração do axios
+// ✅ CRIAR INSTÂNCIA DO AXIOS AQUI (igual ao services/api.ts)
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL, // SEM "/api" no final
   headers: {
     'Content-Type': 'application/json',
   },
@@ -57,7 +55,6 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
-    // ✅ Tenta carregar usuário do localStorage
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
@@ -70,7 +67,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ Interceptor para adicionar token automaticamente
+  // ✅ INTERCEPTOR PARA ADICIONAR TOKEN
   useEffect(() => {
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
@@ -79,30 +76,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           config.headers.Authorization = `Bearer ${storedToken}`;
         }
         return config;
-      },
-      (error) => {
-        return Promise.reject(error);
       }
     );
 
     const responseInterceptor = api.interceptors.response.use(
       (response) => response,
       (error) => {
-        console.error('API Error:', error.response?.status, error.config?.url);
-
         if (error.response?.status === 401) {
-          console.log('Token expirado ou inválido');
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           setToken(null);
           setUser(null);
-
-          // ✅ Só redireciona se não estiver já na página de login
           if (!location.pathname.includes('/login')) {
             navigate('/login', { replace: true });
           }
         }
-
         return Promise.reject(error);
       }
     );
@@ -113,7 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, [navigate, location]);
 
-  // ✅ Verifica token ao carregar
+  // ✅ VERIFICA TOKEN AO CARREGAR
   useEffect(() => {
     const verifyStoredToken = async () => {
       const storedToken = localStorage.getItem('token');
@@ -144,7 +132,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const storedToken = localStorage.getItem('token');
       if (!storedToken) return false;
-
       const response = await api.get('/api/auth/verify');
       return response.data.valid;
     } catch (error) {
@@ -157,41 +144,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       console.log('🔐 Tentando login...');
 
+      // ✅ USAR API INSTANCE COM "/api/auth/login"
       const response = await api.post('/api/auth/login', { email, password });
       console.log('✅ Login response:', response.data);
 
       if (response.data.success && response.data.token) {
         const { token, user } = response.data;
-
-        // ✅ SALVA TUDO NO localStorage
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
-
-        // ✅ ATUALIZA ESTADO
         setToken(token);
         setUser(user);
-
         toast.success('Login realizado com sucesso!');
 
-        // ✅ REDIRECIONA para dashboard ou página anterior
         const from = location.state?.from?.pathname || '/dashboard';
         console.log('🔄 Redirecionando para:', from);
         navigate(from, { replace: true });
-
       } else {
         throw new Error(response.data.error || 'Login failed');
       }
     } catch (error: any) {
       console.error('❌ Login error:', error.response?.data || error.message);
-
       if (error.response?.status === 401) {
         toast.error('Credenciais inválidas');
       } else if (error.code === 'ERR_NETWORK') {
-        toast.error('Erro de conexão');
+        toast.error('Erro de conexão. Verifique se o backend está online.');
       } else {
         toast.error(error.response?.data?.error || 'Erro ao fazer login');
       }
-
       throw error;
     } finally {
       setIsLoading(false);
@@ -204,37 +183,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('📝 Tentando registro...');
 
       const response = await api.post('/api/auth/register', {
-        name,
-        email,
-        password,
-        socialName
+        name, email, password, socialName
       });
 
       console.log('✅ Register response:', response.data);
 
       if (response.data.success && response.data.token) {
         const { token, user } = response.data;
-
-        // ✅ SALVA TUDO NO localStorage
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
-
-        // ✅ ATUALIZA ESTADO
         setToken(token);
         setUser(user);
-
         toast.success('Conta criada com sucesso!');
-
-        // ✅ REDIRECIONA para dashboard
         console.log('🔄 Redirecionando para /dashboard');
         navigate('/dashboard', { replace: true });
-
       } else {
         throw new Error(response.data.error || 'Registration failed');
       }
     } catch (error: any) {
       console.error('❌ Registration error:', error.response?.data || error.message);
-
       if (error.response?.status === 400) {
         toast.error('Dados inválidos');
       } else if (error.response?.status === 409) {
@@ -242,7 +209,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else {
         toast.error(error.response?.data?.error || 'Erro ao criar conta');
       }
-
       throw error;
     } finally {
       setIsLoading(false);
@@ -255,12 +221,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      // ✅ LIMPA TUDO
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setToken(null);
       setUser(null);
-
       toast.success('Logout realizado com sucesso');
       navigate('/login', { replace: true });
     }
@@ -278,8 +242,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     token,
     isLoading,
-    isAuthenticated: !!user, // ✅ Computado automaticamente
-
+    isAuthenticated: !!user,
     login,
     register,
     logout,
@@ -287,9 +250,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     updateUser
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
+// ✅ EXPORTAR A INSTÂNCIA DO AXIOS PARA USO EM OUTROS ARQUIVOS
+export { api as authApi };
