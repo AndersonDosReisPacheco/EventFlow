@@ -134,7 +134,7 @@ const Profile: React.FC = () => {
     loadActiveSessions();
   }, [user]);
 
-  // 🔥 CARREGAR SESSÕES ATIVAS
+  //  CARREGAR SESSÕES ATIVAS
   const loadActiveSessions = async () => {
     setLoadingSessions(true);
     try {
@@ -176,7 +176,7 @@ const Profile: React.FC = () => {
     }
   };
 
-  // 🔥 TERMINAR SESSÃO
+  //  TERMINAR SESSÃO
   const terminateSession = async (sessionId: string) => {
     try {
       // Em produção, chamar API para terminar sessão
@@ -188,7 +188,7 @@ const Profile: React.FC = () => {
     }
   };
 
-  // 🔥 TERMINAR TODAS AS SESSÕES
+  //  TERMINAR TODAS AS SESSÕES
   const terminateAllSessions = async () => {
     if (!window.confirm('Tem certeza que deseja terminar todas as outras sessões?')) {
       return;
@@ -202,7 +202,7 @@ const Profile: React.FC = () => {
     }
   };
 
-  // 🔥 FUNÇÃO PARA UPLOAD DE IMAGEM
+  //  FUNÇÃO PARA UPLOAD DE IMAGEM
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -259,7 +259,7 @@ const Profile: React.FC = () => {
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 🔥 VALIDAÇÃO DE BIOGRAFIA
+    //  VALIDAÇÃO DE BIOGRAFIA
     if (profileData.bio && profileData.bio.length > 150) {
       toast.error('A biografia deve ter no máximo 150 caracteres');
       return;
@@ -318,7 +318,7 @@ const Profile: React.FC = () => {
       return;
     }
 
-    // 🔥 VALIDAÇÃO DE SEGURANÇA DA SENHA
+    //  VALIDAÇÃO DE SEGURANÇA DA SENHA
     const hasUpperCase = /[A-Z]/.test(passwordData.newPassword);
     const hasLowerCase = /[a-z]/.test(passwordData.newPassword);
     const hasNumbers = /\d/.test(passwordData.newPassword);
@@ -364,7 +364,7 @@ const Profile: React.FC = () => {
     }
   };
 
-  // 🔥 ATUALIZAR CONFIGURAÇÕES DA CONTA
+  //  ATUALIZAR CONFIGURAÇÕES DA CONTA
   const handleAccountSettingsUpdate = async () => {
     setLoading(true);
     try {
@@ -517,7 +517,7 @@ const Profile: React.FC = () => {
     fileInputRef.current?.click();
   };
 
-  // 🔥 FUNÇÃO PARA EXPORTAR DADOS
+  //  FUNÇÃO PARA EXPORTAR DADOS
   const handleExportData = async (type: 'events' | 'profile' | 'all') => {
     setLoading(true);
     try {
@@ -574,12 +574,12 @@ const Profile: React.FC = () => {
     }
   };
 
-  // 🔥 FUNÇÃO PARA MIGRAR CONTA
+  //  FUNÇÃO PARA MIGRAR CONTA
   const handleMigrateAccount = () => {
     toast.info('Funcionalidade em desenvolvimento');
   };
 
-  // 🔥 FUNÇÃO PARA HABILITAR 2FA
+  //  FUNÇÃO PARA HABILITAR 2FA
   const handleEnable2FA = () => {
     toast.info('Autenticação de dois fatores em desenvolvimento');
   };
@@ -873,12 +873,12 @@ const Profile: React.FC = () => {
                           </span>
                           {profileData.bio && profileData.bio.length > 140 && (
                             <span className="text-yellow-600 font-medium">
-                              ⚠️ Faltam {150 - (profileData.bio?.length || 0)} caracteres
+                               Faltam {150 - (profileData.bio?.length || 0)} caracteres
                             </span>
                           )}
                           {(profileData.bio?.length || 0) > 150 && (
                             <span className="text-red-600 font-bold">
-                              ❌ Limite excedido! ({profileData.bio?.length}/150)
+                               Limite excedido! ({profileData.bio?.length}/150)
                             </span>
                           )}
                         </div>
@@ -1722,7 +1722,7 @@ const Profile: React.FC = () => {
                           <li>Sessões ativas</li>
                         </ul>
                         <p className="text-sm font-medium text-red-800 mt-3">
-                          ⚠️ Recomendamos fazer um backup completo antes de excluir sua conta.
+                           Recomendamos fazer um backup completo antes de excluir sua conta.
                         </p>
                       </div>
                     </div>

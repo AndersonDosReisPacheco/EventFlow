@@ -13,7 +13,5 @@ router.patch("/password", profileController.updatePassword);
 router.delete("/", profileController.deleteAccount);
 router.post("/upload-picture", profileController.uploadProfilePicture);
 
-// Remova esta linha se o método não existir
-// router.put("/credentials", authenticateToken, profileController.updateCredentials);
 
 export default router;

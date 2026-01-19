@@ -1,4 +1,4 @@
-// D:\Meu_Projetos_Pessoais\EventFlow\frontend\src\pages\Register.tsx
+
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
@@ -13,9 +13,14 @@ import {
   Lock,
   Eye,
   EyeOff,
-  CheckCircle,
+  UserPlus,
+  Shield,
   AlertCircle,
-  ShieldCheck
+  CheckCircle,
+  Loader2,
+  ArrowLeft,
+  Sparkles,
+  PartyPopper
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -23,23 +28,18 @@ import toast from 'react-hot-toast'
 const registerSchema = z.object({
   name: z.string()
     .min(1, 'Nome é obrigatório')
-    .min(3, 'Nome deve ter no mínimo 3 caracteres')
-    .max(50, 'Nome deve ter no máximo 50 caracteres'),
+    .min(3, 'Nome deve ter pelo menos 3 caracteres'),
+  socialName: z.string().optional(),
   email: z.string()
     .min(1, 'Email é obrigatório')
     .email('Email inválido'),
   password: z.string()
     .min(1, 'Senha é obrigatória')
-    .min(8, 'Senha deve ter no mínimo 8 caracteres')
+    .min(6, 'Senha deve ter no mínimo 6 caracteres')
     .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
-    .regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minúscula')
     .regex(/[0-9]/, 'Senha deve conter pelo menos um número'),
   confirmPassword: z.string()
     .min(1, 'Confirmação de senha é obrigatória'),
-  socialName: z.string()
-    .max(100, 'Nome social muito longo')
-    .optional()
-    .nullable(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'As senhas não coincidem',
   path: ['confirmPassword'],
@@ -52,88 +52,116 @@ const Register: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false) //  NOVO ESTADO
   const navigate = useNavigate()
-  const { register: registerUser } = useAuth()
+  const { register } = useAuth()
 
   const {
-    register,
+    register: registerField,
     handleSubmit,
     formState: { errors },
     watch,
+    reset,
+    clearErrors
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       name: '',
+      socialName: '',
       email: '',
       password: '',
       confirmPassword: '',
-      socialName: '',
     },
   })
 
   const password = watch('password')
 
-  const getPasswordStrength = (password: string) => {
-    if (!password) return { score: 0, label: 'Vazia', color: 'danger', textColor: 'text-danger-600 dark:text-danger-400' }
-
-    let score = 0
-    if (password.length >= 8) score++
-    if (/[A-Z]/.test(password)) score++
-    if (/[a-z]/.test(password)) score++
-    if (/[0-9]/.test(password)) score++
-    if (/[^A-Za-z0-9]/.test(password)) score++
-
-    const levels = [
-      { label: 'Muito fraca', color: 'danger', textColor: 'text-danger-600 dark:text-danger-400' },
-      { label: 'Fraca', color: 'danger', textColor: 'text-danger-600 dark:text-danger-400' },
-      { label: 'Regular', color: 'warning', textColor: 'text-warning-600 dark:text-warning-400' },
-      { label: 'Boa', color: 'warning', textColor: 'text-warning-600 dark:text-warning-400' },
-      { label: 'Forte', color: 'success', textColor: 'text-success-600 dark:text-success-400' },
-      { label: 'Muito forte', color: 'success', textColor: 'text-success-600 dark:text-success-400' },
-    ]
-
-    return levels[Math.min(score, levels.length - 1)]
-  }
-
   const onSubmit = async (data: RegisterFormData) => {
+    //  LIMPA ERROS ANTERIORES
+    clearErrors()
     setIsLoading(true)
+    setIsRedirecting(false)
 
     try {
-      // ✅ Usar a função register do AuthContext
-      await registerUser(data.name, data.email, data.password, data.socialName || undefined)
-      toast.success('Conta criada com sucesso!')
-      navigate('/dashboard')
-    } catch (error: any) {
-      console.error('Erro no registro:', error)
+      console.log(' Iniciando cadastro...')
 
-      // ✅ TRATAMENTO DE ERRO SIMPLIFICADO E CORRETO
-      if (error.response?.status === 400) {
-        const errorData = error.response.data
-        if (errorData.details?.field === 'email') {
-          toast.error(errorData.details?.message || 'Email inválido')
-        } else if (errorData.error?.includes('Email')) {
-          toast.error('Este email já está em uso')
-        } else {
-          toast.error(errorData.error || 'Dados inválidos')
+      //  EXECUTA CADASTRO
+      await register(data.name, data.email, data.password, data.socialName || undefined)
+
+      //  O REDIRECIONAMENTO É FEITO DENTRO DA FUNÇÃO register DO AUTHCONTEXT
+      //  MAS AQUI MOSTRAMOS A MENSAGEM DE REDIRECIONAMENTO
+      setIsRedirecting(true)
+
+      toast.success(
+        <div className="flex items-center">
+          <PartyPopper className="w-5 h-5 mr-2 text-yellow-500" />
+          <div>
+            <p className="font-medium">Cadastro realizado com sucesso!</p>
+            <p className="text-sm">Redirecionando para login...</p>
+          </div>
+        </div>,
+        {
+          duration: 4000,
+          icon: ''
         }
-      } else if (error.response?.status === 409) {
-        toast.error('Este email já está cadastrado')
-      } else if (error.response?.status === 500) {
-        toast.error('Erro interno do servidor. Tente novamente.')
+      )
+
+    } catch (error: any) {
+      console.error('Erro no cadastro:', error)
+      setIsRedirecting(false)
+
+      //  REMOVE NOTIFICAÇÕES DUPLICADAS
+      toast.dismiss()
+
+      if (error.response?.status === 409) {
+        toast.error('Este email já está cadastrado. Tente fazer login.', {
+          duration: 5000,
+          icon: ''
+        })
+      } else if (error.response?.status === 400) {
+        toast.error('Dados inválidos. Verifique as informações.', {
+          duration: 4000,
+          icon: ''
+        })
       } else if (error.code === 'ERR_NETWORK') {
-        toast.error('Erro de conexão. Verifique sua internet.')
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.', {
+          duration: 5000,
+          icon: ''
+        })
       } else if (error.response?.data?.error) {
-        // ✅ Mostra a mensagem de erro do backend diretamente
-        toast.error(error.response.data.error)
+        const errorMsg = error.response.data.error.toLowerCase()
+        if (errorMsg.includes('weak') || errorMsg.includes('fraca')) {
+          toast.error('Senha muito fraca. Use letras, números e caracteres especiais.')
+        } else if (errorMsg.includes('invalid') || errorMsg.includes('inválido')) {
+          toast.error('Dados inválidos fornecidos.')
+        } else {
+          toast.error(error.response.data.error)
+        }
       } else {
-        toast.error('Erro ao criar conta. Tente novamente.')
+        toast.error('Erro ao criar conta. Tente novamente em alguns instantes.', {
+          duration: 4000,
+          icon: ''
+        })
       }
     } finally {
       setIsLoading(false)
     }
   }
 
-  const strength = getPasswordStrength(password || '')
+  const handleDemoRegister = async () => {
+    //  PREENCHE COM DADOS DE DEMONSTRAÇÃO
+    reset({
+      name: 'Usuário Demo',
+      email: `demo${Date.now()}@eventflow.com`,
+      password: 'Demo@123',
+      confirmPassword: 'Demo@123',
+    })
+
+    toast.success('Dados de demonstração preenchidos!', {
+      icon: '',
+      duration: 3000
+    })
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-black p-4">
@@ -143,38 +171,69 @@ const Register: React.FC = () => {
         transition={{ duration: 0.3 }}
         className="w-full max-w-md"
       >
+        {/*  BANNER DE REDIRECIONAMENTO */}
+        {isRedirecting && (
+          <motion.div
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -20, opacity: 0 }}
+            className="mb-6 p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800"
+          >
+            <div className="flex items-center">
+              <Loader2 className="w-5 h-5 text-green-600 dark:text-green-400 mr-3 animate-spin" />
+              <div>
+                <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                  Cadastro realizado!
+                </p>
+                <p className="text-xs text-green-700 dark:text-green-400 mt-1">
+                  Redirecionando para login em 3 segundos...
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         <div className="glass-card rounded-3xl p-8 shadow-2xl">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-purple-500 mb-4 shadow-lg">
-              <ShieldCheck className="w-8 h-8 text-white" />
+              <UserPlus className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Criar Conta
+              Criar Nova Conta
             </h2>
             <p className="mt-2 text-gray-600 dark:text-gray-300">
-              Junte-se ao EventFlow e comece a monitorar seus eventos
+              Junte-se ao EventFlow
             </p>
           </div>
 
-          {/* Security Banner */}
+          {/* Demo Register Banner */}
           <motion.div
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="mb-6 p-4 rounded-xl bg-gradient-to-r from-success-50 to-primary-50 dark:from-success-900/20 dark:to-primary-900/20 border border-success-100 dark:border-success-800"
+            transition={{ delay: 0.2 }}
+            className="mb-6 p-4 rounded-xl bg-gradient-to-r from-primary-50 to-purple-50 dark:from-primary-900/20 dark:to-purple-900/20 border border-primary-100 dark:border-primary-800"
           >
-            <div className="flex items-start">
-              <CheckCircle className="w-5 h-5 text-success-600 dark:text-success-400 mr-3 mt-0.5 flex-shrink-0" />
+            <div className="flex items-center">
+              <Sparkles className="w-5 h-5 text-primary-600 dark:text-primary-400 mr-3" />
               <div>
-                <p className="text-sm font-medium text-success-800 dark:text-success-300">
-                  Segurança de Nível Empresarial
+                <p className="text-sm font-medium text-primary-800 dark:text-primary-300">
+                  Cadastro Rápido
                 </p>
-                <p className="text-xs text-success-600 dark:text-success-400 mt-1">
-                  Todos os eventos são criptografados e auditados com tecnologia de ponta
+                <p className="text-xs text-primary-600 dark:text-primary-400 mt-1">
+                  Preencha automaticamente com dados de teste
                 </p>
               </div>
             </div>
+
+            <button
+              onClick={handleDemoRegister}
+              disabled={isLoading}
+              className="mt-3 w-full py-2 px-4 rounded-lg bg-gradient-to-r from-primary-500 to-purple-500 hover:from-primary-600 hover:to-purple-600 text-white text-sm font-medium transition-all duration-300 disabled:opacity-50 shadow-md hover:shadow-lg flex items-center justify-center"
+            >
+              <User className="w-4 h-4 mr-2" />
+              Preencher com Dados Demo
+            </button>
           </motion.div>
 
           {/* Form */}
@@ -182,7 +241,7 @@ const Register: React.FC = () => {
             {/* Name Field */}
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Nome Completo
+                Nome Completo *
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -194,8 +253,9 @@ const Register: React.FC = () => {
                   autoComplete="name"
                   className={`input-primary pl-10 ${errors.name ? 'border-danger-500 focus:ring-danger-500' : ''}`}
                   placeholder="Seu nome completo"
-                  {...register('name')}
+                  {...registerField('name')}
                   disabled={isLoading}
+                  onChange={() => errors.name && clearErrors('name')}
                 />
               </div>
               {errors.name && (
@@ -212,7 +272,7 @@ const Register: React.FC = () => {
             {/* Social Name Field */}
             <div>
               <label htmlFor="socialName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Nome Social <span className="text-gray-500 text-xs">(Opcional)</span>
+                Nome Social (Opcional)
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -222,17 +282,20 @@ const Register: React.FC = () => {
                   id="socialName"
                   type="text"
                   className="input-primary pl-10"
-                  placeholder="Como você gostaria de ser chamado"
-                  {...register('socialName')}
+                  placeholder="Como prefere ser chamado"
+                  {...registerField('socialName')}
                   disabled={isLoading}
                 />
               </div>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Este nome será exibido no seu perfil
+              </p>
             </div>
 
             {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email
+                Email *
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -244,8 +307,9 @@ const Register: React.FC = () => {
                   autoComplete="email"
                   className={`input-primary pl-10 ${errors.email ? 'border-danger-500 focus:ring-danger-500' : ''}`}
                   placeholder="seu@email.com"
-                  {...register('email')}
+                  {...registerField('email')}
                   disabled={isLoading}
+                  onChange={() => errors.email && clearErrors('email')}
                 />
               </div>
               {errors.email && (
@@ -262,7 +326,7 @@ const Register: React.FC = () => {
             {/* Password Field */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Senha
+                Senha *
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -274,8 +338,9 @@ const Register: React.FC = () => {
                   autoComplete="new-password"
                   className={`input-primary pl-10 pr-10 ${errors.password ? 'border-danger-500 focus:ring-danger-500' : ''}`}
                   placeholder="••••••••"
-                  {...register('password')}
+                  {...registerField('password')}
                   disabled={isLoading}
+                  onChange={() => errors.password && clearErrors('password')}
                 />
                 <button
                   type="button"
@@ -290,61 +355,6 @@ const Register: React.FC = () => {
                   )}
                 </button>
               </div>
-
-              {/* Password Strength Meter */}
-              {password && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="mt-3"
-                >
-                  <div className="mb-2">
-                    <div className="flex justify-between text-xs">
-                      <span className="font-medium">Força da senha:</span>
-                      <span className={`font-bold ${strength.textColor}`}>
-                        {strength.label}
-                      </span>
-                    </div>
-                    <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-1">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(strength.score / 5) * 100}%` }}
-                        transition={{ duration: 0.5 }}
-                        className={`h-full bg-${strength.color}-500`}
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Password Requirements */}
-              <div className="mt-3 space-y-1">
-                <div className="flex items-center text-xs">
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center mr-2 ${password?.length >= 8 ? 'bg-success-100 text-success-600' : 'bg-gray-100 text-gray-400'}`}>
-                    {password?.length >= 8 ? <CheckCircle className="w-3 h-3" /> : '•'}
-                  </div>
-                  <span className={password?.length >= 8 ? 'text-success-600' : 'text-gray-500'}>
-                    Mínimo 8 caracteres
-                  </span>
-                </div>
-                <div className="flex items-center text-xs">
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center mr-2 ${/[A-Z]/.test(password || '') ? 'bg-success-100 text-success-600' : 'bg-gray-100 text-gray-400'}`}>
-                    {/[A-Z]/.test(password || '') ? <CheckCircle className="w-3 h-3" /> : '•'}
-                  </div>
-                  <span className={/[A-Z]/.test(password || '') ? 'text-success-600' : 'text-gray-500'}>
-                    Pelo menos uma letra maiúscula
-                  </span>
-                </div>
-                <div className="flex items-center text-xs">
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center mr-2 ${/[0-9]/.test(password || '') ? 'bg-success-100 text-success-600' : 'bg-gray-100 text-gray-400'}`}>
-                    {/[0-9]/.test(password || '') ? <CheckCircle className="w-3 h-3" /> : '•'}
-                  </div>
-                  <span className={/[0-9]/.test(password || '') ? 'text-success-600' : 'text-gray-500'}>
-                    Pelo menos um número
-                  </span>
-                </div>
-              </div>
-
               {errors.password && (
                 <motion.p
                   initial={{ opacity: 0, y: -10 }}
@@ -354,12 +364,33 @@ const Register: React.FC = () => {
                   {errors.password.message}
                 </motion.p>
               )}
+
+              {/* Password Requirements */}
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {[
+                  { condition: password?.length >= 6, text: '6+ caracteres' },
+                  { condition: /[A-Z]/.test(password || ''), text: 'Letra maiúscula' },
+                  { condition: /[0-9]/.test(password || ''), text: 'Número' },
+                  { condition: /[^A-Za-z0-9]/.test(password || ''), text: 'Caractere especial' },
+                ].map((req, idx) => (
+                  <div key={idx} className="flex items-center space-x-1">
+                    {req.condition ? (
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-gray-400" />
+                    )}
+                    <span className={`text-xs ${req.condition ? 'text-green-600 dark:text-green-400' : 'text-gray-500'}`}>
+                      {req.text}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Confirm Password Field */}
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Confirmar Senha
+                Confirmar Senha *
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -371,8 +402,9 @@ const Register: React.FC = () => {
                   autoComplete="new-password"
                   className={`input-primary pl-10 pr-10 ${errors.confirmPassword ? 'border-danger-500 focus:ring-danger-500' : ''}`}
                   placeholder="••••••••"
-                  {...register('confirmPassword')}
+                  {...registerField('confirmPassword')}
                   disabled={isLoading}
+                  onChange={() => errors.confirmPassword && clearErrors('confirmPassword')}
                 />
                 <button
                   type="button"
@@ -398,37 +430,24 @@ const Register: React.FC = () => {
               )}
             </div>
 
-            {/* Terms and Conditions */}
-            <div className="flex items-start group cursor-pointer">
-              <div className="relative mt-1">
-                <input
-                  id="terms"
-                  name="terms"
-                  type="checkbox"
-                  required
-                  className="peer h-4 w-4 rounded border-2 border-gray-300 bg-white checked:border-primary-500 checked:bg-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:checked:border-primary-500 dark:checked:bg-primary-500 cursor-pointer"
-                  disabled={isLoading}
-                />
-                <CheckCircle className="pointer-events-none absolute left-0.5 top-0.5 h-3 w-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+            {/* Important Notice */}
+            <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-xl">
+              <div className="flex">
+                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-3 flex-shrink-0" />
+                <div>
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    <span className="font-medium">Atenção:</span> Após o cadastro, você será redirecionado para a tela de login para fazer seu primeiro acesso.
+                  </p>
+                </div>
               </div>
-              <label htmlFor="terms" className="ml-2 block text-sm text-gray-700 dark:text-gray-300 cursor-pointer group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
-                Concordo com os{' '}
-                <Link to="/terms" className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 underline">
-                  Termos de Serviço
-                </Link>{' '}
-                e{' '}
-                <Link to="/privacy" className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 underline">
-                  Política de Privacidade
-                </Link>
-              </label>
             </div>
 
             {/* Submit Button */}
             <motion.button
               type="submit"
-              disabled={isLoading}
-              whileHover={{ scale: isLoading ? 1 : 1.02 }}
-              whileTap={{ scale: isLoading ? 1 : 0.98 }}
+              disabled={isLoading || isRedirecting}
+              whileHover={{ scale: (isLoading || isRedirecting) ? 1 : 1.02 }}
+              whileTap={{ scale: (isLoading || isRedirecting) ? 1 : 0.98 }}
               className="btn-primary w-full flex items-center justify-center shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
@@ -436,25 +455,21 @@ const Register: React.FC = () => {
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                   Criando conta...
                 </>
+              ) : isRedirecting ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Redirecionando...
+                </>
               ) : (
                 <>
-                  <CheckCircle className="w-5 h-5 mr-2" />
-                  Criar minha conta
+                  <UserPlus className="w-5 h-5 mr-2" />
+                  Criar Conta
                 </>
               )}
             </motion.button>
           </form>
 
-          {/* Divider */}
-          <div className="mt-8">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Social Registration */}
+          {/* Social Register */}
           <div className="mt-6">
             <SocialLoginButtons type="register" />
           </div>
@@ -467,35 +482,32 @@ const Register: React.FC = () => {
                 to="/login"
                 className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 hover:underline transition-colors"
               >
-                Entre aqui
+                Faça login
               </Link>
             </p>
           </div>
 
-          {/* Security Features */}
+          {/* Back Link */}
+          <div className="mt-4 text-center">
+            <Link
+              to="/"
+              className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Voltar para início
+            </Link>
+          </div>
+
+          {/* Security Info */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
+            transition={{ delay: 0.5 }}
             className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700"
           >
-            <div className="grid grid-cols-2 gap-4 text-xs text-gray-500 dark:text-gray-400">
-              <div className="flex items-center">
-                <ShieldCheck className="w-3 h-3 mr-2 text-primary-500" />
-                <span>Criptografia SSL/TLS</span>
-              </div>
-              <div className="flex items-center">
-                <AlertCircle className="w-3 h-3 mr-2 text-success-500" />
-                <span>Backup diário</span>
-              </div>
-              <div className="flex items-center">
-                <Lock className="w-3 h-3 mr-2 text-purple-500" />
-                <span>2FA Opcional</span>
-              </div>
-              <div className="flex items-center">
-                <Eye className="w-3 h-3 mr-2 text-warning-500" />
-                <span>Auditoria completa</span>
-              </div>
+            <div className="flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
+              <Shield className="w-3 h-3 mr-1 text-primary-500" />
+              <span>Seus dados estão protegidos com criptografia de ponta a ponta</span>
             </div>
           </motion.div>
         </div>

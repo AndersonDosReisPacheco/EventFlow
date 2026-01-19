@@ -1,3 +1,4 @@
+// frontend/src/components/ProtectedRoute.tsx - VERSÃO CORRIGIDA
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,8 +16,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const location = useLocation();
 
   useEffect(() => {
-    // Debug para verificar estado
-    console.log('🔐 ProtectedRoute - Estado:', {
+    console.log('🛡️ ProtectedRoute - Estado:', {
       hasUser: !!user,
       isLoading,
       path: location.pathname
@@ -40,21 +40,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Se não tem usuário, redireciona para login
+  // ✅ SE NÃO TEM USUÁRIO, SEMPRE REDIRECIONA PARA LOGIN
   if (!user) {
-    console.log('🔐 Usuário não autenticado, redirecionando para login');
+    console.log('🚫 Usuário não autenticado, redirecionando para login');
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
-  // Verificação de admin (se necessário)
-  if (requireAdmin) {
-    // Se seu usuário tiver propriedade 'role' ou 'isAdmin'
-    // if (user.role !== 'ADMIN' || !user.isAdmin) {
-    //   return <Navigate to="/dashboard" replace />;
-    // }
-  }
-
-  console.log('🔐 Usuário autenticado, renderizando conteúdo');
+  console.log('✅ Usuário autenticado, renderizando conteúdo');
   return <>{children}</>;
 };
 

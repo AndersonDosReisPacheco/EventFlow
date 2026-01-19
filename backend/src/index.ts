@@ -130,7 +130,7 @@ const generateDemoEvents = async () => {
       });
 
       if (existingEvents === 0) {
-        console.log("📊 Criando eventos demo para usuário demo...");
+        console.log(" Criando eventos demo para usuário demo...");
 
         // Criar eventos demo para usuário demo
         const demoEvents = [
@@ -235,7 +235,7 @@ const generateDemoEvents = async () => {
       });
 
       if (existingAdminEvents === 0) {
-        console.log("📊 Criando eventos demo para administrador...");
+        console.log(" Criando eventos demo para administrador...");
 
         // Criar eventos demo para admin
         const adminEvents = [
@@ -295,7 +295,7 @@ const generateDemoEvents = async () => {
       if (existingNotifications === 0) {
         const notifications = [
           {
-            title: "🎉 Bem-vindo ao EventFlow!",
+            title: " Bem-vindo ao EventFlow!",
             message:
               "Sua conta foi criada com sucesso. Comece explorando o dashboard.",
             type: "SUCCESS",
@@ -303,14 +303,14 @@ const generateDemoEvents = async () => {
             metadata: { welcome: true },
           },
           {
-            title: "🔐 Login detectado",
+            title: " Login detectado",
             message: "Um novo login foi realizado na sua conta.",
             type: "INFO",
             userId: user.id,
             metadata: { ip: "192.168.1.100" },
           },
           {
-            title: "📊 Dashboard disponível",
+            title: " Dashboard disponível",
             message: "Seu dashboard está pronto com dados de demonstração.",
             type: "SUCCESS",
             userId: user.id,

@@ -9,5 +9,3 @@ export const eventFiltersSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
 });
-
-// Se precisar de outro schema (ex: criação de evento), adicione aqui
