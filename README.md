@@ -1,255 +1,249 @@
-🚀 EventFlow
-Auditoria e Rastreamento Inteligente de Eventos em Tempo Real
+# 🚀 EventFlow — Plataforma de Auditoria e Rastreamento de Eventos em Tempo Real
 
+## 📌 Visão Geral
 
-📌 Visão Geral
+O **EventFlow** é uma **plataforma completa de auditoria, rastreamento de eventos e gerenciamento de acessos em tempo real**, desenvolvida com foco em **segurança, transparência e controle de dados**. O sistema permite acompanhar atividades de usuários, autenticações, eventos do sistema e métricas operacionais por meio de **dashboards interativos**, **logs auditáveis** e **configurações avançadas de perfil e segurança**.
 
-EventFlow é uma aplicação Full Stack moderna, desenvolvida para auditoria, monitoramento e rastreamento de eventos e atividades de usuários em tempo real.
+O projeto foi pensado para ambientes corporativos, aplicações SaaS e sistemas que exigem **monitoramento contínuo**, **histórico confiável de eventos** e **gestão robusta de usuários**.
 
-O sistema foi projetado com foco em:
+---
 
-🔐 Segurança
+## 🎯 Objetivo do Projeto
 
-📊 Observabilidade
+* Auditar e rastrear **eventos e acessos em tempo real**
+* Centralizar **logs de autenticação e ações do usuário**
+* Garantir **segurança, rastreabilidade e conformidade**
+* Oferecer **experiência moderna** com interface intuitiva
+* Permitir **exportação e controle total dos dados do usuário**
 
-⚡ Performance
+---
 
-📈 Escalabilidade
+## 🧠 Como o EventFlow Funciona
 
-🎯 Experiência do usuário
+### 🔐 Autenticação e Cadastro
 
-🧠 Arquitetura limpa e profissional
+* Cadastro dinâmico de usuários
+* Validação automática de usuários já existentes
+* Senhas criptografadas
+* Após cadastro, o usuário é **redirecionado obrigatoriamente para o login**
+* Login com credenciais previamente cadastradas
+* Autenticação baseada em **JWT (Access Token + Refresh Token)**
+* Redirecionamento automático para o **Dashboard principal** após login bem-sucedido
 
-🧠 Explicação Simples (para quem não é técnico)
+---
 
-O EventFlow é um sistema que:
+## 🖥️ Dashboard Principal
 
-Permite criar contas de usuários
+O **Dashboard** apresenta informações consolidadas e em tempo real:
 
-Controla login e autenticação
+* 📊 **Total de eventos registrados**
+* 👤 **Logins realizados no dia**
+* 📈 **Acessos ao dashboard**
+* 🗓️ **Eventos dos últimos 7 dias**
+* 📉 Gráficos em tempo real (preparados para expansão)
+* 📄 Exportação de relatórios
 
-Registra eventos e atividades
+---
 
-Mostra gráficos e estatísticas
+## ⚙️ Configurações do Usuário
 
-Permite configurar perfil, segurança e notificações
+### 👤 Perfil
 
-Armazena tudo com segurança em banco de dados
+* Visualização do nome e e-mail cadastrados
+* Edição de perfil:
 
-Funciona em tempo real
+  * Foto ou avatar
+  * Nome completo
+  * Nome social
+  * E-mail
+  * Biografia (até **150 caracteres**)
 
-🏗️ Arquitetura do Projeto
-Frontend (React + Vite)
-        ↓ API REST
-Backend (Node.js + Express + Prisma)
-        ↓
-Banco de Dados (PostgreSQL)
+---
 
+### 🔐 Segurança do Perfil
 
-Frontend e Backend são totalmente desacoplados, comunicando-se via API REST segura.
+* Alteração de senha:
 
+  * Senha atual
+  * Nova senha
+  * Confirmação da nova senha
+* Regras recomendadas:
 
+  * Letras maiúsculas
+  * Letras minúsculas
+  * Números
+  * Caracteres especiais
+* Autenticação de dois fatores (2FA)
+* Visualização de **sessões ativas**:
 
-🖥️ Frontend — Tecnologias Utilizadas
-Linguagens e Ferramentas
+  * Navegador (ex: Chrome 120)
+  * IP atual
 
-TypeScript
+---
 
-JavaScript
+### 🔔 Notificações
 
-HTML5
+* Notificações por e-mail
+* Notificações push
+* Alertas de segurança
+* Alertas de login
+* Alterações de produto
+* Newsletter
+* E-mails de marketing
+* Marcar todas como lidas
+* Visualizar notificações não lidas
+* Limpar todas as notificações
 
-CSS3
+---
 
-Frameworks e Bibliotecas
+### 🎨 Aparência e Preferências
 
-React
+* Tema claro / escuro 🌙
+* Idiomas disponíveis:
 
-Vite
+  * Português (BR)
+  * Inglês (EUA)
+  * Espanhol
+* Sessão automática:
 
-React Router DOM
+  * 15 minutos
+  * 30 minutos
+  * 1 hora
+  * 2 horas
+* Preferências de retenção de dados
 
-Axios
+---
 
-Tailwind CSS
+### 📦 Gerenciamento de Dados
 
-PostCSS
+* Exportação de dados:
 
-ESLint
+  * Eventos
+  * Perfil
+  * Backup completo da conta
+* Download dos dados em **JSON**
+* Limpeza de eventos críticos
+* Exclusão permanente da conta (com confirmação de senha)
 
-Funcionalidades do Frontend
+---
 
-Login e cadastro em tempo real
+### 🔄 Migração de Conta (Em Desenvolvimento)
 
-Validação de e-mail duplicado
+* Criação de processos de migração
+* Importação/exportação futura de contas
 
-Sugestão de senha forte
+---
 
-Login social (UI preparada)
+## 🛠️ Tecnologias Utilizadas
 
-Dashboard com métricas
+### 🔙 Backend
 
-Gráficos dinâmicos
+* **Node.js**
+* **Express.js**
+* **TypeScript**
+* **Prisma ORM**
+* **PostgreSQL** (Render)
+* **JWT (Access + Refresh Tokens)**
+* **Bcrypt** (hash de senhas)
+* **Zod** (validação de dados)
+* **Helmet** (segurança HTTP)
+* **Morgan** (logs)
+* **CORS**
 
-Filtros por período
+---
 
-Perfil editável
+### 🎨 Frontend
 
-Preferências de tema e idioma
+* **React.js**
+* **TypeScript**
+* **Vite** (build e desenvolvimento rápido)
+* **React Router DOM**
+* **Axios / Fetch API**
+* **Chart.js / React-ChartJS-2**
+* **Framer Motion** (animações)
+* **React Hook Form + Zod**
 
-Sistema de notificações
+---
 
-Rotas protegidas
+## 🗄️ Banco de Dados
 
-🧠 Backend — Tecnologias Utilizadas
-Linguagens e Runtime
+* **PostgreSQL**
+* Estrutura relacional
+* Migrações automáticas via Prisma
+* Criação dinâmica de tabelas
 
-Node.js
+---
 
-TypeScript
+## ☁️ Infraestrutura e Deploy
 
-Frameworks e Bibliotecas
+* **Frontend**: Vercel
+* **Backend**: Render
+* **Banco de Dados**: PostgreSQL (Render)
+* Variáveis de ambiente isoladas por ambiente
 
-Express
+---
 
-Prisma ORM
+## 🔑 Variáveis de Ambiente (Exemplo)
 
-PostgreSQL
+```env
+PORT=10000
+NODE_ENV=production
+DATABASE_URL=postgresql://user:password@host/database
+JWT_REFRESH_SECRET=your_refresh_secret
+ACCESS_TOKEN_EXPIRES_IN=15m
+REFRESH_TOKEN_EXPIRES_IN=7d
+FRONTEND_URL=https://eventflow.vercel.app
+```
 
-JWT
+Frontend:
 
-bcrypt
+```env
+VITE_API_URL=https://eventflow-backend.onrender.com
+```
 
-dotenv
+---
 
-winston
+## 📈 Performance e Otimização
 
-cors
+* Code splitting no frontend
+* Build otimizado com Vite
+* Hashing seguro de senhas
+* Tokens com expiração configurável
+* Logs estruturados
 
-helmet
+---
 
-Funcionalidades do Backend
+## 🔒 Segurança
 
-API REST
+* Autenticação JWT
+* Hash de senhas com Bcrypt
+* Proteção HTTP com Helmet
+* CORS configurado
+* Controle de sessões
+* Alertas de login e segurança
 
-Autenticação JWT
+---
 
-Controle de sessão
+## 📦 Status do Projeto
 
-Registro de eventos
+🚧 **Em desenvolvimento contínuo**
 
-Logs de auditoria
+* Funcionalidades principais concluídas
+* Migração de contas em desenvolvimento
+* Gráficos avançados em expansão
 
-Middleware de segurança
+---
 
-Notificações
+## 👨‍💻 Autor
 
-Perfil do usuário
+**Anderson Pacheco**
 
-Validações e schemas
+Projeto desenvolvido com foco em aprendizado avançado, arquitetura moderna e boas práticas de mercado.
 
-🗄️ Banco de Dados
+---
 
-PostgreSQL
+## ⭐ Considerações Finais
 
-Gerenciado via Prisma ORM
+O **EventFlow** é um projeto robusto, escalável e pronto para evoluir para ambientes de produção reais, oferecendo **controle total, auditoria detalhada e segurança avançada**.
 
-Migrações versionadas
-
-Schema tipado
-
-Conexão segura via variável de ambiente
-
-🔐 Variáveis de Ambiente
-Backend (backend/.env)
-PORT=5000
-DATABASE_URL=postgresql://user:password@localhost:5432/eventflow
-JWT_SECRET=your_secret
-NODE_ENV=development
-
-Frontend (frontend/.env)
-VITE_API_URL=http://localhost:5000
-
-
-⚠️ Nunca versionar .env em produção
-Use .env.example no GitHub.
-
-📦 Instalação — Passo a Passo Completo
-1️⃣ Pré-requisitos
-
-Node.js (v18+)
-
-NPM ou Yarn
-
-PostgreSQL
-
-Git
-
-2️⃣ Clonar o projeto
-git clone https://github.com/andersondosreispacheco/eventflow.git
-cd EventFlow
-
-3️⃣ Backend
-cd backend
-npm install
-
-
-Criar banco de dados no PostgreSQL:
-
-CREATE DATABASE eventflow;
-
-
-Rodar migrações:
-
-npx prisma migrate deploy
-
-
-Iniciar backend:
-
-npm run dev
-
-4️⃣ Frontend
-cd frontend
-npm install
-npm run dev
-
-
-Sistema de logging com Winston
-
-Middleware de auditoria ativa
-
-🐳 Docker (opcional)
-
-Projeto preparado para uso com Docker e Docker Compose para ambientes de produção e testes.
-
-🚀 Deploy (Produção)
-
-Frontend: Netlify
-
-Backend: Render
-
-Banco: PostgreSQL gerenciado
-
-CI/CD: GitHub Actions (opcional)
-
-🎯 Objetivo do Projeto
-
-Portfólio profissional
-
-Projeto real e escalável
-
-Demonstração de arquitetura moderna
-
-Preparação para mercado de trabalho
-
-👨‍💻 Autor
-
-Anderson Pacheco
-Desenvolvedor Full Stack
-
-✅ Status do Projeto
-
-✔️ Completo
-✔️ Funcional
-✔️ Escalável
-✔️ Pronto para produção
+Se você procura uma base sólida para sistemas auditáveis e orientados a eventos, este projeto é um excelente ponto de partida.
