@@ -1,4 +1,4 @@
-// frontend/src/services/api.ts - VERSÃO SILENCIOSA
+
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
