@@ -3,7 +3,7 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
 //  URL SILENCIOSA - Sem logs desnecessários
-const API_URL = import.meta.env.VITE_API_URL || 'https://eventflow-backend-tsf2.onrender.com';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 //  API SEM LOGS NO CONSOLE
 const api = axios.create({

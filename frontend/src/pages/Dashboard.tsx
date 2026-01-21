@@ -53,7 +53,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { toast } from 'react-hot-toast';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://eventflow-backend-tsf2.onrender.com';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 interface DashboardStats {
   totalEvents: number;
